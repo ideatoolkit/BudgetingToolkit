@@ -1,0 +1,1255 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Flow Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --bg-2:#121931;
+      --panel:rgba(18,25,49,.82);
+      --panel-2:rgba(255,255,255,.05);
+      --text:#eef2ff;
+      --muted:#9aa6c7;
+      --border:rgba(255,255,255,.08);
+      --accent:#7c5cff;
+      --accent-2:#19c2ff;
+      --green:#22c55e;
+      --red:#ef4444;
+      --yellow:#f59e0b;
+      --shadow:0 20px 40px rgba(0,0,0,.28);
+      --radius:22px;
+      --radius-sm:14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124,92,255,.25), transparent 28%),
+        radial-gradient(circle at top right, rgba(25,194,255,.18), transparent 24%),
+        linear-gradient(180deg, #090d1a 0%, #0c1122 100%);
+      min-height:100vh;
+    }
+    .app{
+      max-width:1440px;
+      margin:0 auto;
+      padding:24px;
+      display:grid;
+      gap:20px;
+      grid-template-columns:280px 1fr;
+    }
+    .sidebar{
+      position:sticky;
+      top:24px;
+      align-self:start;
+      background:var(--panel);
+      backdrop-filter: blur(18px);
+      border:1px solid var(--border);
+      box-shadow:var(--shadow);
+      border-radius:28px;
+      padding:22px;
+    }
+    .brand{
+      display:flex; align-items:center; gap:14px; margin-bottom:20px;
+    }
+    .brand-badge{
+      width:48px;height:48px;border-radius:16px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      display:grid;place-items:center;font-weight:800;font-size:20px;
+      box-shadow:0 10px 25px rgba(124,92,255,.35);
+    }
+    .brand h1{font-size:20px; margin:0}
+    .brand p{margin:3px 0 0; color:var(--muted); font-size:13px}
+    .nav{
+      display:grid; gap:10px;
+    }
+    .nav button{
+      border:none; background:transparent; color:var(--text);
+      padding:14px 16px; border-radius:16px; text-align:left;
+      font-weight:600; cursor:pointer; transition:.2s ease;
+    }
+    .nav button:hover,.nav button.active{
+      background:linear-gradient(90deg, rgba(124,92,255,.22), rgba(25,194,255,.14));
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .sidebar .hint{
+      margin-top:18px; padding:14px; border-radius:18px;
+      background:var(--panel-2); color:var(--muted); font-size:13px; line-height:1.5;
+      border:1px solid var(--border);
+    }
+    .content{display:grid; gap:20px;}
+    .hero{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:28px;
+      padding:24px;
+      box-shadow:var(--shadow);
+      display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap;
+    }
+    .hero h2{margin:0 0 8px; font-size:30px}
+    .hero p{margin:0; color:var(--muted); max-width:700px}
+    .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .button,.ghost,select,input,textarea{
+      border-radius:14px; border:1px solid var(--border);
+      background:rgba(255,255,255,.04); color:var(--text);
+      padding:12px 14px; font:inherit;
+    }
+    .button{background:linear-gradient(135deg,var(--accent),#9467ff); border:none; font-weight:700; cursor:pointer}
+    .ghost{cursor:pointer}
+    .grid-4,.grid-3,.grid-2{
+      display:grid; gap:18px;
+    }
+    .grid-4{grid-template-columns:repeat(4,1fr)}
+    .grid-3{grid-template-columns:repeat(3,1fr)}
+    .grid-2{grid-template-columns:repeat(2,1fr)}
+    .card{
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:24px;
+      padding:20px;
+      box-shadow:var(--shadow);
+    }
+    .stat-label{color:var(--muted); font-size:13px; margin-bottom:8px}
+    .stat-value{font-size:30px; font-weight:800; letter-spacing:-.03em}
+    .tiny{font-size:12px; color:var(--muted)}
+    .positive{color:#7ef5a6}
+    .negative{color:#ff9fa7}
+    .section-title{
+      display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:16px;
+    }
+    .section-title h3{margin:0; font-size:18px}
+    .section-title p{margin:4px 0 0; color:var(--muted); font-size:13px}
+    .page{display:none}
+    .page.active{display:grid; gap:20px}
+    .canvas-wrap{height:320px}
+    canvas{max-width:100%}
+    .list{
+      display:grid; gap:12px;
+      max-height:530px; overflow:auto; padding-right:4px;
+    }
+    .entry{
+      padding:16px;
+      border-radius:18px;
+      background:rgba(255,255,255,.035);
+      border:1px solid var(--border);
+      display:grid; gap:10px;
+    }
+    .entry-top,.entry-bottom{
+      display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; align-items:center;
+    }
+    .title-row{display:flex; align-items:center; gap:12px; min-width:0}
+    .category-dot{
+      width:14px;height:14px;border-radius:999px; flex:0 0 auto;
+      box-shadow:0 0 0 4px rgba(255,255,255,.04);
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:999px; background:rgba(255,255,255,.05);
+      color:var(--muted); font-size:12px;
+      border:1px solid var(--border);
+    }
+    .tags{display:flex; gap:8px; flex-wrap:wrap}
+    .entry h4{margin:0; font-size:16px}
+    .entry .amount{font-size:24px; font-weight:800}
+    .controls{
+      display:grid; gap:12px;
+      grid-template-columns:repeat(6, minmax(0,1fr));
+    }
+    .field{
+      display:grid; gap:8px;
+    }
+    .field label{font-size:12px; color:var(--muted)}
+    .field.wide{grid-column:span 2}
+    .field.full{grid-column:1 / -1}
+    textarea{min-height:92px; resize:vertical}
+    .category-grid{
+      display:grid; gap:12px; grid-template-columns:repeat(auto-fit, minmax(170px,1fr));
+    }
+    .category-card{
+      border:1px solid var(--border); border-radius:18px; padding:14px;
+      background:rgba(255,255,255,.03); display:flex; justify-content:space-between; align-items:center; gap:10px;
+    }
+    .swatch{
+      width:18px;height:18px;border-radius:999px; border:2px solid rgba(255,255,255,.3)
+    }
+    .empty{
+      text-align:center; color:var(--muted); padding:30px 16px;
+      border:1px dashed var(--border); border-radius:18px;
+    }
+    .split{
+      display:grid; gap:20px; grid-template-columns:1.15fr .85fr;
+    }
+    .table{
+      width:100%; border-collapse:collapse;
+    }
+    .table th,.table td{
+      text-align:left; padding:12px 10px; border-bottom:1px solid var(--border); font-size:14px;
+    }
+    .table th{color:var(--muted); font-weight:600}
+    .badge{
+      display:inline-flex; align-items:center; gap:8px; padding:7px 10px;
+      border-radius:999px; font-size:12px; background:rgba(255,255,255,.06); border:1px solid var(--border);
+    }
+    .actions{display:flex; gap:8px; flex-wrap:wrap}
+    .mini-btn{
+      border:none; cursor:pointer; color:var(--text); background:rgba(255,255,255,.07);
+      padding:8px 10px; border-radius:12px; font:inherit;
+    }
+    .footer-note{color:var(--muted); font-size:13px}
+    .modal{
+      position:fixed; inset:0; background:rgba(2,6,23,.62); display:none; place-items:center; z-index:50; padding:20px;
+    }
+    .modal.active{display:grid}
+    .modal-card{
+      width:min(860px,100%);
+      max-height:90vh; overflow:auto;
+      background:#10172d; border-radius:24px; border:1px solid var(--border); box-shadow:var(--shadow);
+      padding:22px;
+    }
+    .range-group{
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .range-group button{
+      border:none; padding:10px 12px; border-radius:12px; cursor:pointer;
+      background:rgba(255,255,255,.05); color:var(--text); font-weight:600;
+    }
+    .range-group button.active{background:linear-gradient(135deg,var(--accent),#9467ff)}
+    .mobile-top{display:none}
+    @media (max-width:1180px){
+      .app{grid-template-columns:1fr}
+      .sidebar{display:none}
+      .mobile-top{display:flex; gap:12px; align-items:center}
+      .controls{grid-template-columns:repeat(2, minmax(0,1fr))}
+      .grid-4,.grid-3,.grid-2,.split{grid-template-columns:1fr}
+      .field.wide{grid-column:span 1}
+    }
+    @media (max-width:760px){
+      .app{padding:14px}
+      .hero h2{font-size:24px}
+      .controls{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">₿</div>
+        <div>
+          <h1>Budget Flow Pro</h1>
+          <p>Redesigned spending dashboard</p>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav"></nav>
+
+      <div class="hint">
+        Built to improve your draft with a cleaner theme, stronger tabs, richer chart options, deeper filters, and editing after posting. Everything saves locally in your browser.
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="hero">
+        <div>
+          <div class="mobile-top">
+            <div class="brand-badge">₿</div>
+            <div>
+              <strong>Budget Flow Pro</strong>
+            </div>
+          </div>
+          <h2>Better charts, better layout, better control.</h2>
+          <p>
+            This upgraded version keeps the budgeting flow simple while improving readability, navigation, filtering, analytics,
+            category colors, and full entry editing.
+          </p>
+        </div>
+        <div class="toolbar">
+          <div class="range-group" id="quickRanges"></div>
+          <button class="ghost" id="loadDemoBtn">Load demo</button>
+          <button class="button" data-go="add">Add expense</button>
+        </div>
+      </div>
+
+      <section class="page active" id="page-dashboard"></section>
+      <section class="page" id="page-add"></section>
+      <section class="page" id="page-entries"></section>
+      <section class="page" id="page-insights"></section>
+      <section class="page" id="page-settings"></section>
+    </main>
+  </div>
+
+  <div class="modal" id="editModal">
+    <div class="modal-card">
+      <div class="section-title">
+        <div>
+          <h3>Edit entry</h3>
+          <p>Update any value after posting.</p>
+        </div>
+        <button class="ghost" id="closeModalBtn">Close</button>
+      </div>
+      <form id="editForm"></form>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'budget-flow-pro-v1';
+  const PAGES = [
+    { id:'dashboard', label:'Overview' },
+    { id:'add', label:'Add Expense' },
+    { id:'entries', label:'Entries' },
+    { id:'insights', label:'Insights' },
+    { id:'settings', label:'Settings' }
+  ];
+
+  const defaultCategories = [
+    { id: uid(), name:'Housing', color:'#7c5cff' },
+    { id: uid(), name:'Food', color:'#ff8a5b' },
+    { id: uid(), name:'Transport', color:'#19c2ff' },
+    { id: uid(), name:'Subscriptions', color:'#2dd4bf' },
+    { id: uid(), name:'Health', color:'#ef476f' },
+    { id: uid(), name:'Shopping', color:'#f59e0b' },
+  ];
+
+  const defaultState = {
+    entries: [],
+    categories: defaultCategories,
+    monthlyIncome: 5000,
+    quickRange: '3M'
+  };
+
+  let state = loadState();
+  let activePage = 'dashboard';
+  let dashboardChart, trendChart, insightChart;
+  let editingId = null;
+
+  const navEl = document.getElementById('nav');
+  const pages = {
+    dashboard: document.getElementById('page-dashboard'),
+    add: document.getElementById('page-add'),
+    entries: document.getElementById('page-entries'),
+    insights: document.getElementById('page-insights'),
+    settings: document.getElementById('page-settings'),
+  };
+
+  init();
+
+  function init(){
+    renderNav();
+    renderQuickRanges();
+    renderAll();
+    bindGlobal();
+  }
+
+  function uid(){
+    return Math.random().toString(36).slice(2, 10);
+  }
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return structuredClone(defaultState);
+      const parsed = JSON.parse(raw);
+      return {
+        entries: parsed.entries || [],
+        categories: parsed.categories?.length ? parsed.categories : structuredClone(defaultCategories),
+        monthlyIncome: Number(parsed.monthlyIncome ?? 5000),
+        quickRange: parsed.quickRange || '3M'
+      };
+    }catch{
+      return structuredClone(defaultState);
+    }
+  }
+
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function bindGlobal(){
+    document.getElementById('loadDemoBtn').addEventListener('click', () => {
+      loadDemoData();
+      renderAll();
+      goTo('dashboard');
+    });
+    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+    document.getElementById('editModal').addEventListener('click', e => {
+      if(e.target.id === 'editModal') closeModal();
+    });
+    document.body.addEventListener('click', e => {
+      const page = e.target.getAttribute('data-go');
+      if(page) goTo(page);
+
+      const editId = e.target.getAttribute('data-edit');
+      if(editId) openEditModal(editId);
+
+      const delId = e.target.getAttribute('data-delete');
+      if(delId) {
+        state.entries = state.entries.filter(x => x.id !== delId);
+        saveState();
+        renderAll();
+      }
+
+      const catDeleteId = e.target.getAttribute('data-delete-category');
+      if(catDeleteId){
+        const used = state.entries.some(e => e.categoryId === catDeleteId);
+        if(used){ alert('This category is in use. Reassign entries before deleting it.'); return; }
+        state.categories = state.categories.filter(c => c.id !== catDeleteId);
+        saveState();
+        renderAll();
+      }
+    });
+  }
+
+  function renderNav(){
+    navEl.innerHTML = PAGES.map(p => `
+      <button class="${p.id===activePage?'active':''}" data-go="${p.id}">${p.label}</button>
+    `).join('');
+  }
+
+  function renderQuickRanges(){
+    const el = document.getElementById('quickRanges');
+    const ranges = ['1M','3M','6M','1Y','YTD','ALL'];
+    el.innerHTML = ranges.map(r => `<button class="${state.quickRange===r?'active':''}" data-range="${r}">${r}</button>`).join('');
+    [...el.querySelectorAll('button')].forEach(btn => btn.addEventListener('click', () => {
+      state.quickRange = btn.dataset.range;
+      saveState();
+      renderQuickRanges();
+      renderDashboard();
+      renderInsights();
+    }));
+  }
+
+  function goTo(pageId){
+    activePage = pageId;
+    renderNav();
+    Object.entries(pages).forEach(([id, el]) => el.classList.toggle('active', id === pageId));
+  }
+
+  function renderAll(){
+    renderDashboard();
+    renderAddPage();
+    renderEntries();
+    renderInsights();
+    renderSettings();
+    saveState();
+  }
+
+  function getCategory(catId){
+    return state.categories.find(c => c.id === catId) || { name:'Uncategorized', color:'#6b7280' };
+  }
+
+  function currency(n){
+    return new Intl.NumberFormat(undefined, { style:'currency', currency:'USD', maximumFractionDigits:2 }).format(Number(n||0));
+  }
+
+  function toMonthStr(date){
+    return String(date).slice(0,7);
+  }
+
+  function getDateRangePreset(preset){
+    const today = new Date();
+    const end = new Date(today.getFullYear(), today.getMonth()+1, 0);
+    let start = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    if(preset === '1M'){
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+    } else if(preset === '3M'){
+      start = new Date(today.getFullYear(), today.getMonth()-2, 1);
+    } else if(preset === '6M'){
+      start = new Date(today.getFullYear(), today.getMonth()-5, 1);
+    } else if(preset === '1Y'){
+      start = new Date(today.getFullYear(), today.getMonth()-11, 1);
+    } else if(preset === 'YTD'){
+      start = new Date(today.getFullYear(), 0, 1);
+    } else if(preset === 'ALL'){
+      const months = state.entries.map(e => new Date(e.date)).sort((a,b)=>a-b);
+      start = months[0] || new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+    return { start, end };
+  }
+
+  function entriesInQuickRange(){
+    const { start, end } = getDateRangePreset(state.quickRange);
+    return state.entries.filter(e => {
+      const d = new Date(e.date);
+      return d >= start && d <= end;
+    });
+  }
+
+  function aggregateBy(list, keyFn){
+    const map = new Map();
+    list.forEach(item => {
+      const key = keyFn(item);
+      map.set(key, (map.get(key) || 0) + Number(item.amount));
+    });
+    return [...map.entries()];
+  }
+
+  function renderDashboard(){
+    const list = entriesInQuickRange();
+    const total = list.reduce((s,e)=>s+Number(e.amount),0);
+    const recurring = list.filter(x => x.costType === 'Recurring').reduce((s,e)=>s+Number(e.amount),0);
+    const oneTime = total - recurring;
+    const avg = list.length ? total / Math.max(1, uniqueMonths(list).length) : 0;
+    const left = state.monthlyIncome - avg;
+
+    const categoryAgg = aggregateBy(list, e => getCategory(e.categoryId).name)
+      .sort((a,b)=>b[1]-a[1]);
+
+    const monthlyAgg = aggregateBy(list, e => toMonthStr(e.date)).sort((a,b)=>a[0].localeCompare(b[0]));
+
+    pages.dashboard.innerHTML = `
+      <div class="grid-4">
+        ${statCard('Available / month', currency(left), left >= 0 ? 'positive' : 'negative', `${currency(state.monthlyIncome)} income minus ${currency(avg)} average spend`)}
+        ${statCard('Spent in range', currency(total), '', `${list.length} tracked entries in ${state.quickRange}`)}
+        ${statCard('Recurring spend', currency(recurring), '', `${list.filter(x=>x.costType==='Recurring').length} recurring items`)}
+        ${statCard('One-time spend', currency(oneTime), '', `${list.filter(x=>x.costType!=='Recurring').length} one-time items`)}
+      </div>
+
+      <div class="split">
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h3>Category split</h3>
+              <p>Colored by your category settings.</p>
+            </div>
+          </div>
+          <div class="canvas-wrap"><canvas id="dashboardCategoryChart"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h3>Top categories</h3>
+              <p>Fast review of where money goes.</p>
+            </div>
+          </div>
+          <div class="list">
+            ${categoryAgg.length ? categoryAgg.slice(0,8).map(([name, amount]) => {
+              const cat = state.categories.find(c => c.name === name) || { color:'#6b7280' };
+              return `
+                <div class="entry">
+                  <div class="entry-top">
+                    <div class="title-row">
+                      <span class="category-dot" style="background:${cat.color}"></span>
+                      <h4>${name}</h4>
+                    </div>
+                    <div class="amount">${currency(amount)}</div>
+                  </div>
+                </div>
+              `;
+            }).join('') : `<div class="empty">No entries yet. Load demo data or add your first expense.</div>`}
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <div>
+            <h3>Monthly trend</h3>
+            <p>Spend over time with smoother layout and stronger readability.</p>
+          </div>
+        </div>
+        <div class="canvas-wrap"><canvas id="dashboardTrendChart"></canvas></div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="section-title"><div><h3>Recent entries</h3><p>Newest submissions with category colors.</p></div></div>
+          <div class="list">${renderEntryCards(state.entries.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5), false)}</div>
+        </div>
+        <div class="card">
+          <div class="section-title"><div><h3>Payment methods</h3><p>Channel mix at a glance.</p></div></div>
+          ${renderMiniTable(aggregateBy(list, e => e.paymentMethod).sort((a,b)=>b[1]-a[1]).slice(0,6))}
+        </div>
+        <div class="card">
+          <div class="section-title"><div><h3>Recurring schedule</h3><p>Frequency summary for planning.</p></div></div>
+          ${renderMiniTable(aggregateBy(list.filter(x=>x.costType==='Recurring'), e => e.frequency || 'None').sort((a,b)=>b[1]-a[1]).slice(0,6))}
+        </div>
+      </div>
+    `;
+
+    const categoryLabels = categoryAgg.map(x => x[0]);
+    const categoryData = categoryAgg.map(x => x[1]);
+    const categoryColors = categoryAgg.map(([name]) => (state.categories.find(c => c.name === name) || {color:'#6b7280'}).color);
+
+    destroyChart(dashboardChart);
+    const dcc = document.getElementById('dashboardCategoryChart');
+    if(dcc){
+      dashboardChart = new Chart(dcc, {
+        type:'doughnut',
+        data:{ labels: categoryLabels, datasets:[{ data: categoryData, backgroundColor: categoryColors, borderWidth:0 }]},
+        options: commonChartOptions('Spend by category')
+      });
+    }
+
+    destroyChart(trendChart);
+    const dtc = document.getElementById('dashboardTrendChart');
+    if(dtc){
+      trendChart = new Chart(dtc, {
+        type:'line',
+        data:{
+          labels: monthlyAgg.map(x=>x[0]),
+          datasets:[{
+            label:'Monthly spend',
+            data: monthlyAgg.map(x=>x[1]),
+            tension:.35,
+            fill:true,
+            borderColor:'#7c5cff',
+            backgroundColor:'rgba(124,92,255,.15)',
+            pointRadius:4,
+            pointBackgroundColor:'#19c2ff'
+          }]
+        },
+        options: commonChartOptions('Monthly spend')
+      });
+    }
+  }
+
+  function statCard(label, value, valueClass, note){
+    return `
+      <div class="card">
+        <div class="stat-label">${label}</div>
+        <div class="stat-value ${valueClass}">${value}</div>
+        <div class="tiny">${note}</div>
+      </div>
+    `;
+  }
+
+  function uniqueMonths(list){
+    return [...new Set(list.map(e => toMonthStr(e.date)))];
+  }
+
+  function renderMiniTable(items){
+    if(!items.length) return '<div class="empty">No data yet.</div>';
+    const total = items.reduce((s, [,v]) => s + v, 0);
+    return `
+      <table class="table">
+        <thead><tr><th>Group</th><th>Amount</th><th>Share</th></tr></thead>
+        <tbody>
+          ${items.map(([label,val]) => `
+            <tr>
+              <td>${label || 'None'}</td>
+              <td>${currency(val)}</td>
+              <td>${((val/total)*100).toFixed(0)}%</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function renderAddPage(){
+    const categoryOptions = state.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    pages.add.innerHTML = `
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h3>New expense</h3>
+              <p>Faster entry form with clean grouping.</p>
+            </div>
+          </div>
+
+          <form id="addForm" class="controls">
+            ${entryFields(categoryOptions)}
+            <div class="field full actions">
+              <button class="button" type="submit">Save expense</button>
+              <button class="ghost" type="reset">Clear</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h3>Manage categories</h3>
+              <p>Every category has a visible color used in charts and lists.</p>
+            </div>
+          </div>
+
+          <form id="categoryForm" class="controls">
+            <div class="field wide">
+              <label>Category name</label>
+              <input name="name" placeholder="Ex: Utilities" required />
+            </div>
+            <div class="field">
+              <label>Color</label>
+              <input type="color" name="color" value="#7c5cff" required />
+            </div>
+            <div class="field actions">
+              <label>&nbsp;</label>
+              <button class="button" type="submit">Add category</button>
+            </div>
+          </form>
+
+          <div class="category-grid" style="margin-top:16px">
+            ${state.categories.map(c => `
+              <div class="category-card">
+                <div class="title-row">
+                  <span class="swatch" style="background:${c.color}"></span>
+                  <div><strong>${c.name}</strong></div>
+                </div>
+                <button class="mini-btn" data-delete-category="${c.id}">Delete</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('addForm').addEventListener('submit', onSubmitAddForm);
+    document.getElementById('categoryForm').addEventListener('submit', onSubmitCategoryForm);
+  }
+
+  function entryFields(categoryOptions, values={}){
+    return `
+      <div class="field wide">
+        <label>Title</label>
+        <input name="title" placeholder="Rent, groceries, gym..." value="${esc(values.title || '')}" required />
+      </div>
+      <div class="field">
+        <label>Amount</label>
+        <input name="amount" type="number" min="0" step="0.01" value="${esc(values.amount || '')}" required />
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input name="date" type="date" value="${esc(values.date || todayISO())}" required />
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select name="categoryId" required>${categoryOptions}</select>
+      </div>
+      <div class="field">
+        <label>Cost type</label>
+        <select name="costType">
+          <option ${values.costType==='One-Time'?'selected':''}>One-Time</option>
+          <option ${values.costType==='Recurring'?'selected':''}>Recurring</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Frequency</label>
+        <select name="frequency">
+          <option ${!values.frequency?'selected':''}>None</option>
+          <option ${values.frequency==='Weekly'?'selected':''}>Weekly</option>
+          <option ${values.frequency==='Monthly'?'selected':''}>Monthly</option>
+          <option ${values.frequency==='Quarterly'?'selected':''}>Quarterly</option>
+          <option ${values.frequency==='Yearly'?'selected':''}>Yearly</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Payment method</label>
+        <select name="paymentMethod">
+          ${['Debit','Credit Card','Cash','Bank Transfer','Apple Pay','PayPal','Other'].map(x => `<option ${values.paymentMethod===x?'selected':''}>${x}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Budget period</label>
+        <select name="budgetPeriod">
+          <option ${values.budgetPeriod==='Monthly'?'selected':''}>Monthly</option>
+          <option ${values.budgetPeriod==='Yearly'?'selected':''}>Yearly</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select name="status">
+          <option ${values.status==='Planned'?'selected':''}>Planned</option>
+          <option ${(!values.status || values.status==='Paid')?'selected':''}>Paid</option>
+          <option ${values.status==='Refunded'?'selected':''}>Refunded</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>Notes</label>
+        <textarea name="notes" placeholder="Optional notes">${esc(values.notes || '')}</textarea>
+      </div>
+    `;
+  }
+
+  function onSubmitAddForm(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const entry = Object.fromEntries(fd.entries());
+    entry.id = uid();
+    entry.amount = Number(entry.amount || 0);
+    state.entries.unshift(entry);
+    saveState();
+    e.target.reset();
+    renderAll();
+    goTo('entries');
+  }
+
+  function onSubmitCategoryForm(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = Object.fromEntries(fd.entries());
+    state.categories.push({ id: uid(), name: data.name.trim(), color: data.color });
+    saveState();
+    renderAll();
+  }
+
+  function renderEntries(){
+    const months = [...new Set(state.entries.map(e => toMonthStr(e.date)))].sort().reverse();
+    const cats = state.categories;
+    pages.entries.innerHTML = `
+      <div class="card">
+        <div class="section-title">
+          <div>
+            <h3>Advanced entry filters</h3>
+            <p>More filter options than the draft, plus edit and delete actions on every row.</p>
+          </div>
+        </div>
+
+        <div class="controls" id="entryFilters">
+          <div class="field"><label>Search</label><input id="fSearch" placeholder="Search title or note"></div>
+          <div class="field"><label>Month</label><select id="fMonth"><option value="">All</option>${months.map(m=>`<option>${m}</option>`).join('')}</select></div>
+          <div class="field"><label>Category</label><select id="fCategory"><option value="">All</option>${cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+          <div class="field"><label>Payment</label><select id="fPayment"><option value="">All</option>${uniq(state.entries.map(e=>e.paymentMethod)).map(v=>`<option>${v}</option>`).join('')}</select></div>
+          <div class="field"><label>Cost type</label><select id="fCostType"><option value="">All</option><option>One-Time</option><option>Recurring</option></select></div>
+          <div class="field"><label>Budget period</label><select id="fBudgetPeriod"><option value="">All</option><option>Monthly</option><option>Yearly</option></select></div>
+          <div class="field"><label>Frequency</label><select id="fFrequency"><option value="">All</option><option>None</option><option>Weekly</option><option>Monthly</option><option>Quarterly</option><option>Yearly</option></select></div>
+          <div class="field"><label>Status</label><select id="fStatus"><option value="">All</option><option>Planned</option><option>Paid</option><option>Refunded</option></select></div>
+          <div class="field"><label>Min amount</label><input id="fMin" type="number" min="0" step="0.01" placeholder="0"></div>
+          <div class="field"><label>Max amount</label><input id="fMax" type="number" min="0" step="0.01" placeholder="1000"></div>
+          <div class="field"><label>Sort</label>
+            <select id="fSort">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="highest">Highest amount</option>
+              <option value="lowest">Lowest amount</option>
+              <option value="az">Title A–Z</option>
+            </select>
+          </div>
+          <div class="field actions">
+            <label>&nbsp;</label>
+            <button class="ghost" id="resetFiltersBtn">Reset filters</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        ${statCard('Shown total', '<span id="shownTotal"></span>', '', 'Filtered result total')}
+        ${statCard('Largest shown', '<span id="largestShown"></span>', '', 'Biggest filtered amount')}
+        ${statCard('Shown count', '<span id="shownCount"></span>', '', 'Number of filtered entries')}
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <div><h3>Editable entries</h3><p>Every item keeps its category color and can be updated after posting.</p></div>
+        </div>
+        <div class="list" id="entryList"></div>
+      </div>
+    `;
+
+    const controls = ['fSearch','fMonth','fCategory','fPayment','fCostType','fBudgetPeriod','fFrequency','fStatus','fMin','fMax','fSort']
+      .map(id => document.getElementById(id));
+    controls.forEach(el => el.addEventListener('input', applyEntryFilters));
+    document.getElementById('resetFiltersBtn').addEventListener('click', e => {
+      e.preventDefault();
+      controls.forEach(el => el.value = '');
+      document.getElementById('fSort').value = 'newest';
+      applyEntryFilters();
+    });
+    applyEntryFilters();
+  }
+
+  function applyEntryFilters(){
+    let list = state.entries.slice();
+
+    const search = val('fSearch').toLowerCase().trim();
+    const month = val('fMonth');
+    const categoryId = val('fCategory');
+    const payment = val('fPayment');
+    const costType = val('fCostType');
+    const budgetPeriod = val('fBudgetPeriod');
+    const frequency = val('fFrequency');
+    const status = val('fStatus');
+    const min = Number(val('fMin') || 0);
+    const max = val('fMax') ? Number(val('fMax')) : Infinity;
+    const sort = val('fSort') || 'newest';
+
+    list = list.filter(e => {
+      const textMatch = !search || e.title.toLowerCase().includes(search) || (e.notes || '').toLowerCase().includes(search);
+      const monthMatch = !month || toMonthStr(e.date) === month;
+      const categoryMatch = !categoryId || e.categoryId === categoryId;
+      const paymentMatch = !payment || e.paymentMethod === payment;
+      const costMatch = !costType || e.costType === costType;
+      const periodMatch = !budgetPeriod || e.budgetPeriod === budgetPeriod;
+      const frequencyMatch = !frequency || (frequency === 'None' ? (e.frequency === 'None' || !e.frequency) : e.frequency === frequency);
+      const statusMatch = !status || e.status === status;
+      const amountMatch = Number(e.amount) >= min && Number(e.amount) <= max;
+      return textMatch && monthMatch && categoryMatch && paymentMatch && costMatch && periodMatch && frequencyMatch && statusMatch && amountMatch;
+    });
+
+    list.sort((a,b) => {
+      if(sort === 'oldest') return new Date(a.date) - new Date(b.date);
+      if(sort === 'highest') return b.amount - a.amount;
+      if(sort === 'lowest') return a.amount - b.amount;
+      if(sort === 'az') return a.title.localeCompare(b.title);
+      return new Date(b.date) - new Date(a.date);
+    });
+
+    document.getElementById('entryList').innerHTML = renderEntryCards(list, true);
+    document.getElementById('shownTotal').textContent = currency(list.reduce((s,e)=>s+Number(e.amount),0));
+    document.getElementById('largestShown').textContent = currency(Math.max(0, ...list.map(e=>Number(e.amount))));
+    document.getElementById('shownCount').textContent = list.length;
+  }
+
+  function renderEntryCards(list, withActions){
+    if(!list.length) return '<div class="empty">No entries match the current filters.</div>';
+    return list.map(e => {
+      const cat = getCategory(e.categoryId);
+      return `
+        <div class="entry">
+          <div class="entry-top">
+            <div class="title-row">
+              <span class="category-dot" style="background:${cat.color}"></span>
+              <div>
+                <h4>${esc(e.title)}</h4>
+                <div class="tiny">${e.date} • ${cat.name}</div>
+              </div>
+            </div>
+            <div class="amount">${currency(e.amount)}</div>
+          </div>
+          <div class="tags">
+            <span class="pill">Payment: ${esc(e.paymentMethod)}</span>
+            <span class="pill">${esc(e.costType)}</span>
+            <span class="pill">Frequency: ${esc(e.frequency || 'None')}</span>
+            <span class="pill">Period: ${esc(e.budgetPeriod)}</span>
+            <span class="pill">Status: ${esc(e.status || 'Paid')}</span>
+          </div>
+          ${e.notes ? `<div class="tiny">${esc(e.notes)}</div>` : ''}
+          ${withActions ? `<div class="actions">
+            <button class="mini-btn" data-edit="${e.id}">Edit</button>
+            <button class="mini-btn" data-delete="${e.id}">Delete</button>
+          </div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderInsights(){
+    const list = entriesInQuickRange();
+    const cats = state.categories;
+    pages.insights.innerHTML = `
+      <div class="card">
+        <div class="section-title">
+          <div>
+            <h3>Richer chart controls</h3>
+            <p>More chart options and grouping controls than the current draft.</p>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="field"><label>Chart type</label>
+            <select id="chartType">
+              <option>doughnut</option>
+              <option>bar</option>
+              <option>line</option>
+              <option>polarArea</option>
+              <option>radar</option>
+            </select>
+          </div>
+          <div class="field"><label>Group by</label>
+            <select id="groupBy">
+              <option value="category">Category</option>
+              <option value="paymentMethod">Payment method</option>
+              <option value="costType">Cost type</option>
+              <option value="frequency">Frequency</option>
+              <option value="budgetPeriod">Budget period</option>
+              <option value="status">Status</option>
+              <option value="month">Month</option>
+            </select>
+          </div>
+          <div class="field"><label>Category</label><select id="ciCategory"><option value="">All</option>${cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+          <div class="field"><label>Payment</label><select id="ciPayment"><option value="">All</option>${uniq(state.entries.map(e=>e.paymentMethod)).map(v=>`<option>${v}</option>`).join('')}</select></div>
+          <div class="field"><label>Cost type</label><select id="ciCostType"><option value="">All</option><option>One-Time</option><option>Recurring</option></select></div>
+          <div class="field"><label>Status</label><select id="ciStatus"><option value="">All</option><option>Planned</option><option>Paid</option><option>Refunded</option></select></div>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="card">
+          <div class="section-title"><div><h3>Interactive chart</h3><p>Updates live from your filters.</p></div></div>
+          <div class="canvas-wrap"><canvas id="insightChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="section-title"><div><h3>Detail breakdown</h3><p>Values behind the current chart.</p></div></div>
+          <div id="insightDetail"></div>
+        </div>
+      </div>
+
+      <div class="card footer-note">
+        Range in use: ${state.quickRange}. Adjust the quick range at the top to compare 1 month, 3 months, 6 months, 1 year, year-to-date, or all history.
+      </div>
+    `;
+
+    ['chartType','groupBy','ciCategory','ciPayment','ciCostType','ciStatus'].forEach(id => {
+      document.getElementById(id).addEventListener('input', applyInsightFilters);
+    });
+    applyInsightFilters();
+  }
+
+  function applyInsightFilters(){
+    let list = entriesInQuickRange();
+    const categoryId = val('ciCategory');
+    const payment = val('ciPayment');
+    const costType = val('ciCostType');
+    const status = val('ciStatus');
+    const groupBy = val('groupBy') || 'category';
+    const chartType = val('chartType') || 'doughnut';
+
+    list = list.filter(e => {
+      return (!categoryId || e.categoryId === categoryId)
+        && (!payment || e.paymentMethod === payment)
+        && (!costType || e.costType === costType)
+        && (!status || e.status === status);
+    });
+
+    const grouped = aggregateBy(list, e => {
+      if(groupBy === 'category') return getCategory(e.categoryId).name;
+      if(groupBy === 'month') return toMonthStr(e.date);
+      return e[groupBy] || 'None';
+    }).sort((a,b)=>b[1]-a[1]);
+
+    const labels = grouped.map(x => x[0]);
+    const data = grouped.map(x => x[1]);
+    const colors = labels.map(label => {
+      const cat = state.categories.find(c => c.name === label);
+      return cat?.color || palette(labels.indexOf(label));
+    });
+
+    destroyChart(insightChart);
+    const ctx = document.getElementById('insightChart');
+    if(ctx){
+      insightChart = new Chart(ctx, {
+        type: chartType,
+        data: {
+          labels,
+          datasets: [{
+            label: 'Spend',
+            data,
+            backgroundColor: colors.map(c => alpha(c, .72)),
+            borderColor: colors,
+            borderWidth: chartType === 'line' ? 3 : 1.5,
+            fill: chartType === 'line',
+            tension: .3
+          }]
+        },
+        options: commonChartOptions('Insights')
+      });
+    }
+
+    document.getElementById('insightDetail').innerHTML = renderMiniTable(grouped);
+  }
+
+  function renderSettings(){
+    pages.settings.innerHTML = `
+      <div class="grid-2">
+        <div class="card">
+          <div class="section-title">
+            <div><h3>Data controls</h3><p>Export, import, and reset local data.</p></div>
+          </div>
+          <div class="actions">
+            <button class="button" id="exportJsonBtn">Export JSON</button>
+            <button class="ghost" id="exportCsvBtn">Export CSV</button>
+            <button class="ghost" id="importJsonBtn">Import JSON</button>
+            <input type="file" id="importFile" accept=".json" style="display:none">
+          </div>
+          <p class="footer-note" style="margin-top:14px">All data stays in browser storage until you export or delete it.</p>
+        </div>
+
+        <div class="card">
+          <div class="section-title">
+            <div><h3>Monthly income</h3><p>Used to calculate available amount in Overview.</p></div>
+          </div>
+          <form id="incomeForm" class="controls">
+            <div class="field wide">
+              <label>Monthly income</label>
+              <input type="number" name="income" min="0" step="0.01" value="${state.monthlyIncome}">
+            </div>
+            <div class="field actions">
+              <label>&nbsp;</label>
+              <button class="button">Save income</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <div><h3>Danger zone</h3><p>Delete all entries and categories.</p></div>
+        </div>
+        <button class="ghost" id="resetAllBtn">Delete all data</button>
+      </div>
+    `;
+
+    document.getElementById('incomeForm').addEventListener('submit', e => {
+      e.preventDefault();
+      state.monthlyIncome = Number(new FormData(e.target).get('income') || 0);
+      saveState();
+      renderDashboard();
+    });
+
+    document.getElementById('exportJsonBtn').addEventListener('click', () => {
+      downloadFile('budget-flow-pro-data.json', JSON.stringify(state, null, 2), 'application/json');
+    });
+
+    document.getElementById('exportCsvBtn').addEventListener('click', () => {
+      const headers = ['title','amount','date','category','costType','frequency','paymentMethod','budgetPeriod','status','notes'];
+      const rows = state.entries.map(e => [
+        csvCell(e.title), csvCell(e.amount), csvCell(e.date), csvCell(getCategory(e.categoryId).name),
+        csvCell(e.costType), csvCell(e.frequency), csvCell(e.paymentMethod), csvCell(e.budgetPeriod), csvCell(e.status), csvCell(e.notes)
+      ]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      downloadFile('budget-flow-pro-data.csv', csv, 'text/csv');
+    });
+
+    document.getElementById('importJsonBtn').addEventListener('click', () => document.getElementById('importFile').click());
+    document.getElementById('importFile').addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      state = {
+        entries: parsed.entries || [],
+        categories: parsed.categories || structuredClone(defaultCategories),
+        monthlyIncome: Number(parsed.monthlyIncome || 0),
+        quickRange: parsed.quickRange || '3M'
+      };
+      saveState();
+      renderQuickRanges();
+      renderAll();
+    });
+
+    document.getElementById('resetAllBtn').addEventListener('click', () => {
+      if(!confirm('Delete all data?')) return;
+      state = structuredClone(defaultState);
+      saveState();
+      renderQuickRanges();
+      renderAll();
+      goTo('dashboard');
+    });
+  }
+
+  function openEditModal(id){
+    editingId = id;
+    const entry = state.entries.find(e => e.id === id);
+    if(!entry) return;
+    const categoryOptions = state.categories.map(c =>
+      `<option value="${c.id}" ${entry.categoryId===c.id?'selected':''}>${c.name}</option>`
+    ).join('');
+
+    document.getElementById('editForm').innerHTML = `
+      <div class="controls">
+        ${entryFields(categoryOptions, entry)}
+        <div class="field full actions">
+          <button class="button" type="submit">Save changes</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('editForm').onsubmit = onSubmitEdit;
+    document.getElementById('editModal').classList.add('active');
+  }
+
+  function onSubmitEdit(e){
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const updated = Object.fromEntries(fd.entries());
+    const idx = state.entries.findIndex(x => x.id === editingId);
+    if(idx === -1) return;
+    state.entries[idx] = { ...state.entries[idx], ...updated, amount:Number(updated.amount || 0) };
+    saveState();
+    closeModal();
+    renderAll();
+    goTo('entries');
+  }
+
+  function closeModal(){
+    document.getElementById('editModal').classList.remove('active');
+    editingId = null;
+  }
+
+  function todayISO(){
+    return new Date().toISOString().slice(0,10);
+  }
+
+  function val(id){ return document.getElementById(id)?.value || ''; }
+  function uniq(arr){ return [...new Set(arr.filter(Boolean))]; }
+  function esc(v){ return String(v).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+  function destroyChart(chart){ if(chart) chart.destroy(); }
+
+  function commonChartOptions(label){
+    return {
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ labels:{ color:'#dce4ff' } },
+        tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${currency(ctx.raw)}` } }
+      },
+      scales:{
+        x:{ ticks:{ color:'#9aa6c7' }, grid:{ color:'rgba(255,255,255,.06)' } },
+        y:{ ticks:{ color:'#9aa6c7', callback:v => '$' + v }, grid:{ color:'rgba(255,255,255,.06)' } }
+      }
+    };
+  }
+
+  function alpha(hex, opacity){
+    const c = hex.replace('#','');
+    const bigint = parseInt(c,16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r},${g},${b},${opacity})`;
+  }
+
+  function palette(i){
+    const set = ['#7c5cff','#19c2ff','#ff8a5b','#2dd4bf','#ef476f','#f59e0b','#8b5cf6','#10b981','#06b6d4','#fb7185'];
+    return set[i % set.length];
+  }
+
+  function csvCell(v){
+    const s = String(v ?? '');
+    return `"${s.replaceAll('"','""')}"`;
+  }
+
+  function downloadFile(name, content, type){
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function loadDemoData(){
+    const c = structuredClone(defaultCategories);
+    state.categories = c;
+    const find = name => c.find(x => x.name === name).id;
+    state.entries = [
+      {id:uid(),title:'Rent',amount:1650,date:'2026-03-01',categoryId:find('Housing'),costType:'Recurring',frequency:'Monthly',paymentMethod:'Bank Transfer',budgetPeriod:'Monthly',status:'Paid',notes:'Apartment rent'},
+      {id:uid(),title:'Groceries',amount:184,date:'2026-03-04',categoryId:find('Food'),costType:'One-Time',frequency:'None',paymentMethod:'Debit',budgetPeriod:'Monthly',status:'Paid',notes:'Weekly shop'},
+      {id:uid(),title:'Gym Membership',amount:55,date:'2026-03-05',categoryId:find('Health'),costType:'Recurring',frequency:'Monthly',paymentMethod:'Credit Card',budgetPeriod:'Monthly',status:'Paid',notes:''},
+      {id:uid(),title:'Netflix',amount:18,date:'2026-03-06',categoryId:find('Subscriptions'),costType:'Recurring',frequency:'Monthly',paymentMethod:'Credit Card',budgetPeriod:'Monthly',status:'Paid',notes:''},
+      {id:uid(),title:'Fuel',amount:72,date:'2026-03-08',categoryId:find('Transport'),costType:'One-Time',frequency:'None',paymentMethod:'Debit',budgetPeriod:'Monthly',status:'Paid',notes:''},
+      {id:uid(),title:'Winter Jacket',amount:140,date:'2026-02-15',categoryId:find('Shopping'),costType:'One-Time',frequency:'None',paymentMethod:'Credit Card',budgetPeriod:'Yearly',status:'Paid',notes:'Seasonal purchase'},
+      {id:uid(),title:'Groceries',amount:202,date:'2026-02-10',categoryId:find('Food'),costType:'One-Time',frequency:'None',paymentMethod:'Debit',budgetPeriod:'Monthly',status:'Paid',notes:''},
+      {id:uid(),title:'Bus Pass',amount:98,date:'2026-02-02',categoryId:find('Transport'),costType:'Recurring',frequency:'Monthly',paymentMethod:'Debit',budgetPeriod:'Monthly',status:'Paid',notes:''},
+      {id:uid(),title:'Dentist Visit',amount:230,date:'2026-01-19',categoryId:find('Health'),costType:'One-Time',frequency:'None',paymentMethod:'Credit Card',budgetPeriod:'Yearly',status:'Paid',notes:''},
+      {id:uid(),title:'Streaming Bundle',amount:34,date:'2026-01-02',categoryId:find('Subscriptions'),costType:'Recurring',frequency:'Monthly',paymentMethod:'PayPal',budgetPeriod:'Monthly',status:'Paid',notes:''},
+      {id:uid(),title:'Home Supplies',amount:88,date:'2026-01-09',categoryId:find('Housing'),costType:'One-Time',frequency:'None',paymentMethod:'Debit',budgetPeriod:'Monthly',status:'Paid',notes:''},
+      {id:uid(),title:'Meal Plan',amount:320,date:'2025-12-20',categoryId:find('Food'),costType:'One-Time',frequency:'None',paymentMethod:'Credit Card',budgetPeriod:'Monthly',status:'Paid',notes:''},
+    ];
+    state.monthlyIncome = 5000;
+    state.quickRange = '3M';
+    saveState();
+  }
+})();
+</script>
+</body>
+</html>
