@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0f14" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="North Ledger personal budgeting app" />
+    <title>North Ledger</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="label">North Ledger</p>
+          <h1 id="headerTitle">Home</h1>
+        </div>
+        <button id="installBtn" class="button ghost small hidden" type="button">Install</button>
+      </header>
+
+      <main>
+        <section class="tab active" data-tab="home" id="tabHome">
+          <div class="hero panel gradient">
+            <div>
+              <p class="label">This month</p>
+              <div class="hero-amount" id="homeTotal">$0.00</div>
+              <div class="subtle" id="homeMonthLabel">Current month</div>
+            </div>
+            <div class="hero-pills">
+              <span class="pill" id="homeTxnCount">0 entries</span>
+              <span class="pill" id="homeTopCategory">No category yet</span>
+            </div>
+          </div>
+
+          <div class="metric-grid" id="homeMetrics"></div>
+
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <p class="label">Snapshot</p>
+                <h2>Spending trend</h2>
+              </div>
+            </div>
+            <div class="chart-card tall"><canvas id="homeTrendChart"></canvas></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <p class="label">Breakdown</p>
+                <h2>Category mix</h2>
+              </div>
+            </div>
+            <div class="chart-card donut-card"><canvas id="homeDonutChart"></canvas></div>
+            <div class="legend" id="homeLegend"></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <p class="label">Insights</p>
+                <h2>What changed</h2>
+              </div>
+            </div>
+            <div class="stack" id="homeInsights"></div>
+          </div>
+        </section>
+
+        <section class="tab" data-tab="add" id="tabAdd">
+          <div class="panel form-panel">
+            <div class="section-head">
+              <div>
+                <p class="label">Quick entry</p>
+                <h2 id="formTitle">Add expense</h2>
+              </div>
+              <button id="resetFormBtn" class="button ghost small" type="button">Clear</button>
+            </div>
+
+            <form id="expenseForm" class="form">
+              <input type="hidden" id="expenseId" />
+              <div class="field">
+                <label for="expenseTitle">Title</label>
+                <input id="expenseTitle" type="text" maxlength="80" placeholder="Groceries, coffee, Netflix" required />
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="expenseAmount">Amount (CAD)</label>
+                  <input id="expenseAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" required />
+                </div>
+                <div class="field">
+                  <label for="expenseDate">Date</label>
+                  <input id="expenseDate" type="date" required />
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="expenseCategory">Category</label>
+                  <select id="expenseCategory"></select>
+                </div>
+                <div class="field action-field">
+                  <label>Categories</label>
+                  <button id="openCategorySheetBtn" class="button secondary" type="button">Manage</button>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="expensePaymentMethod">Payment method</label>
+                  <select id="expensePaymentMethod"></select>
+                </div>
+                <div class="field">
+                  <label>Cost type</label>
+                  <div class="segmented" id="costTypeSegment">
+                    <button class="segment active" data-cost-type="one-time" type="button">One-time</button>
+                    <button class="segment" data-cost-type="recurring" type="button">Recurring</button>
+                  </div>
+                  <input id="expenseCostType" type="hidden" value="one-time" />
+                </div>
+              </div>
+              <div class="field-row hidden" id="recurringRow">
+                <div class="field">
+                  <label for="expenseRecurringFrequency">Frequency</label>
+                  <select id="expenseRecurringFrequency">
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Period</label>
+                  <div class="segmented" id="periodSegment">
+                    <button class="segment active" data-period-type="monthly" type="button">Monthly</button>
+                    <button class="segment" data-period-type="yearly" type="button">Yearly</button>
+                  </div>
+                  <input id="expensePeriodType" type="hidden" value="monthly" />
+                </div>
+              </div>
+              <div class="field" id="nonRecurringPeriodField">
+                <label>Period</label>
+                <div class="segmented" id="periodSegmentSingle">
+                  <button class="segment active" data-period-type="monthly" type="button">Monthly</button>
+                  <button class="segment" data-period-type="yearly" type="button">Yearly</button>
+                </div>
+              </div>
+              <div class="field">
+                <label for="expenseNotes">Notes</label>
+                <textarea id="expenseNotes" rows="3" maxlength="240" placeholder="Optional notes"></textarea>
+              </div>
+              <button class="button primary full" id="saveExpenseBtn" type="submit">Save expense</button>
+            </form>
+          </div>
+
+          <div class="panel">
+            <div class="section-head">
+              <div>
+                <p class="label">Recent</p>
+                <h2>Latest submissions</h2>
+              </div>
+            </div>
+            <div class="list" id="recentList"></div>
+          </div>
+        </section>
+
+        <section class="tab" data-tab="entries" id="tabEntries">
+          <div class="panel sticky-panel">
+            <div class="section-head">
+              <div>
+                <p class="label">Review</p>
+                <h2>Entries</h2>
+              </div>
+              <button id="clearEntryFiltersBtn" class="button ghost small" type="button">Reset</button>
+            </div>
+
+            <div class="field compact-field">
+              <input id="searchInput" type="search" placeholder="Search title or notes" />
+            </div>
+            <div class="field-row tight">
+              <div class="field"><select id="filterMonth"></select></div>
+              <div class="field"><select id="filterSort">
+                <option value="date-desc">Newest</option>
+                <option value="date-asc">Oldest</option>
+                <option value="amount-desc">Highest amount</option>
+                <option value="amount-asc">Lowest amount</option>
+                <option value="created-desc">Recently added</option>
+              </select></div>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><input id="filterDateStart" type="date" /></div>
+              <div class="field"><input id="filterDateEnd" type="date" /></div>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><select id="filterCategory"></select></div>
+              <div class="field"><select id="filterPaymentMethod"></select></div>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><select id="filterCostType">
+                <option value="all">All types</option>
+                <option value="one-time">One-time</option>
+                <option value="recurring">Recurring</option>
+              </select></div>
+              <div class="field"><select id="filterFrequency">
+                <option value="all">All frequencies</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select></div>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><select id="filterPeriodType">
+                <option value="all">All periods</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select></div>
+              <div class="field"><select id="filterGroup">
+                <option value="month">Grouped by month</option>
+                <option value="none">Flat list</option>
+              </select></div>
+            </div>
+          </div>
+
+          <div class="panel ledger-panel">
+            <div class="section-head">
+              <div>
+                <p class="label">Ledger</p>
+                <h2 id="entriesHeading">0 entries</h2>
+              </div>
+            </div>
+            <div id="entriesList"></div>
+          </div>
+        </section>
+
+        <section class="tab" data-tab="charts" id="tabCharts">
+          <div class="panel sticky-panel">
+            <div class="section-head">
+              <div>
+                <p class="label">Analytics</p>
+                <h2>Charts</h2>
+              </div>
+              <button id="clearChartFiltersBtn" class="button ghost small" type="button">Reset</button>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><select id="chartMonth"></select></div>
+              <div class="field"><select id="chartCompareWindow">
+                <option value="1">1 month</option>
+                <option value="2">2 month</option>
+                <option value="3">3 month</option>
+                <option value="5">5 month</option>
+                <option value="12">12 month</option>
+                <option value="year">1 year</option>
+              </select></div>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><select id="chartCategory"></select></div>
+              <div class="field"><select id="chartPaymentMethod"></select></div>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><select id="chartCostType">
+                <option value="all">All types</option>
+                <option value="one-time">One-time</option>
+                <option value="recurring">Recurring</option>
+              </select></div>
+              <div class="field"><select id="chartFrequency">
+                <option value="all">All frequencies</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select></div>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><input id="chartDateStart" type="date" /></div>
+              <div class="field"><input id="chartDateEnd" type="date" /></div>
+            </div>
+            <div class="field-row tight">
+              <div class="field"><select id="chartPeriodType">
+                <option value="all">All periods</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select></div>
+              <div class="field stat-field"><span class="pill wide" id="chartSummaryPill">Ready</span></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head"><div><p class="label">Mix</p><h2>Category donut</h2></div></div>
+            <div class="chart-card donut-card"><canvas id="chartDonut"></canvas></div>
+            <div class="legend" id="chartLegend"></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head"><div><p class="label">Trend</p><h2>Monthly line</h2></div></div>
+            <div class="chart-card tall"><canvas id="chartLine"></canvas></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head"><div><p class="label">Breakdown</p><h2>Category bars</h2></div></div>
+            <div class="chart-card medium"><canvas id="chartBar"></canvas></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head"><div><p class="label">Cost type</p><h2>Recurring vs one-time</h2></div></div>
+            <div class="chart-card medium"><canvas id="chartStack"></canvas></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head"><div><p class="label">Payment methods</p><h2>Method breakdown</h2></div></div>
+            <div class="chart-card medium"><canvas id="chartPayment"></canvas></div>
+          </div>
+
+          <div class="panel">
+            <div class="section-head"><div><p class="label">Summary</p><h2>Chart insights</h2></div></div>
+            <div class="stack" id="chartInsights"></div>
+          </div>
+        </section>
+
+        <section class="tab" data-tab="settings" id="tabSettings">
+          <div class="panel">
+            <div class="section-head"><div><p class="label">Manage</p><h2>Categories</h2></div></div>
+            <button id="openCategorySheetSettingsBtn" class="button secondary" type="button">Add or edit categories</button>
+            <div class="list" id="settingsCategoryList"></div>
+          </div>
+          <div class="panel">
+            <div class="section-head"><div><p class="label">Backup</p><h2>Data</h2></div></div>
+            <div class="button-row">
+              <button id="exportBtn" class="button secondary" type="button">Export backup</button>
+              <label class="button secondary file-label">Import backup<input id="importInput" type="file" accept="application/json" hidden /></label>
+            </div>
+            <div class="storage" id="storageStatus"></div>
+            <button id="resetDataBtn" class="button danger full" type="button">Reset all data</button>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav">
+        <button class="nav-btn active" data-tab-target="home" type="button">Home</button>
+        <button class="nav-btn" data-tab-target="add" type="button">Add</button>
+        <button class="nav-btn" data-tab-target="entries" type="button">Entries</button>
+        <button class="nav-btn" data-tab-target="charts" type="button">Charts</button>
+        <button class="nav-btn" data-tab-target="settings" type="button">Settings</button>
+      </nav>
+    </div>
+
+    <div class="sheet hidden" id="categorySheet" aria-hidden="true">
+      <div class="sheet-backdrop" data-close-sheet="categorySheet"></div>
+      <div class="sheet-panel">
+        <div class="sheet-handle"></div>
+        <div class="section-head"><div><p class="label">Category</p><h2 id="categorySheetTitle">Add category</h2></div><button class="button ghost small" data-close-sheet="categorySheet" type="button">Close</button></div>
+        <form id="categoryForm" class="form compact-form">
+          <input type="hidden" id="categoryId" />
+          <div class="field"><label for="categoryName">Name</label><input id="categoryName" type="text" maxlength="40" required /></div>
+          <div class="field"><label for="categoryColor">Color</label><input id="categoryColor" type="color" value="#7c5cff" /></div>
+          <button class="button primary full" type="submit">Save category</button>
+        </form>
+        <div class="list" id="categoryList"></div>
+      </div>
+    </div>
+
+    <div class="sheet hidden" id="entrySheet" aria-hidden="true">
+      <div class="sheet-backdrop" data-close-sheet="entrySheet"></div>
+      <div class="sheet-panel">
+        <div class="sheet-handle"></div>
+        <div class="section-head"><div><p class="label">Entry</p><h2 id="entrySheetTitle">Expense</h2></div><button class="button ghost small" data-close-sheet="entrySheet" type="button">Close</button></div>
+        <div class="detail-list" id="entrySheetBody"></div>
+        <div class="button-row spread top-gap">
+          <button id="entryEditBtn" class="button secondary" type="button">Edit</button>
+          <button id="entryDuplicateBtn" class="button secondary" type="button">Duplicate</button>
+          <button id="entryDeleteBtn" class="button danger" type="button">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast hidden" id="toast"></div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
