@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#0d111b" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="North Ledger" />
+    <meta name="description" content="Premium personal budgeting and expense tracking app for CAD spending." />
+    <title>North Ledger</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar glass">
+        <div>
+          <p class="eyebrow">Personal Budgeting</p>
+          <h1>North Ledger</h1>
+        </div>
+        <button id="installBtn" class="icon-button hidden" type="button" aria-label="Install app">
+          <span>Install</span>
+        </button>
+      </header>
+
+      <main id="appMain" class="app-main">
+        <section id="homeTab" class="tab-panel active" data-tab="home" aria-label="Home tab">
+          <div class="hero-card premium-card gradient-card">
+            <div>
+              <p class="eyebrow">Focus month</p>
+              <h2 id="homeFocusMonth">—</h2>
+            </div>
+            <div class="hero-total-wrap">
+              <p class="eyebrow">Total spent</p>
+              <div id="homeTotalSpent" class="hero-total">$0.00</div>
+            </div>
+          </div>
+
+          <div class="section-header compact-gap">
+            <h3>Overview</h3>
+            <button class="ghost-button small" data-action="jumpCharts" type="button">More analytics</button>
+          </div>
+
+          <div class="metric-grid" id="homeMetricGrid"></div>
+
+          <div class="premium-card chart-card large-chart-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Spending mix</p>
+                <h3>Category distribution</h3>
+              </div>
+              <div id="homeTopCategoryBadge" class="pill">No data</div>
+            </div>
+            <div class="chart-wrap donut-wrap">
+              <canvas id="homeDonutChart" width="320" height="320"></canvas>
+            </div>
+            <div id="homeLegend" class="legend-grid"></div>
+          </div>
+
+          <div class="premium-card chart-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Monthly trend</p>
+                <h3>Recent spending</h3>
+              </div>
+              <div id="homeTrendBadge" class="pill subtle">Stable</div>
+            </div>
+            <div class="chart-wrap line-wrap">
+              <canvas id="homeTrendChart" width="340" height="220"></canvas>
+            </div>
+          </div>
+
+          <div class="premium-card insights-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Quick insights</p>
+                <h3>What stands out</h3>
+              </div>
+            </div>
+            <div id="homeInsights" class="insight-stack"></div>
+          </div>
+        </section>
+
+        <section id="addTab" class="tab-panel" data-tab="add" aria-label="Add tab">
+          <div class="premium-card form-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Quick add</p>
+                <h2 id="formHeading">Log expense</h2>
+              </div>
+              <button id="clearFormBtn" class="ghost-button small" type="button">Clear</button>
+            </div>
+
+            <form id="expenseForm" class="stack-form" novalidate>
+              <input type="hidden" id="expenseId" />
+              <div class="field">
+                <label for="expenseTitle">Title</label>
+                <input id="expenseTitle" name="title" type="text" inputmode="text" maxlength="60" placeholder="Groceries, streaming, coffee..." required />
+              </div>
+
+              <div class="field-row two-up">
+                <div class="field">
+                  <label for="expenseAmount">Amount (CAD)</label>
+                  <input id="expenseAmount" name="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" required />
+                </div>
+                <div class="field">
+                  <label for="expenseDate">Date</label>
+                  <input id="expenseDate" name="date" type="date" required />
+                </div>
+              </div>
+
+              <div class="field-row two-up">
+                <div class="field">
+                  <label for="expenseCategory">Category</label>
+                  <select id="expenseCategory" name="categoryId"></select>
+                </div>
+                <div class="field inline-field">
+                  <label>Quick category</label>
+                  <button id="openCategorySheetBtn" class="secondary-button fill-width" type="button">Add / manage category</button>
+                </div>
+              </div>
+
+              <div class="field-row two-up">
+                <div class="field">
+                  <label for="expensePaymentMethod">Payment method</label>
+                  <select id="expensePaymentMethod" name="paymentMethodId"></select>
+                </div>
+                <div class="field segmented-wrap">
+                  <label>Cost type</label>
+                  <div class="segmented" id="costTypeSegment">
+                    <button type="button" class="segment active" data-cost-type="one-time">One-time</button>
+                    <button type="button" class="segment" data-cost-type="recurring">Recurring</button>
+                  </div>
+                  <input type="hidden" id="expenseCostType" value="one-time" />
+                </div>
+              </div>
+
+              <div id="recurringFields" class="field-row two-up hidden-block">
+                <div class="field">
+                  <label for="expenseRecurringFrequency">Recurring frequency</label>
+                  <select id="expenseRecurringFrequency" name="recurringFrequency">
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+                <div class="field segmented-wrap">
+                  <label>Reporting period</label>
+                  <div class="segmented" id="periodSegmentRecurring">
+                    <button type="button" class="segment active" data-period-type="monthly">Monthly</button>
+                    <button type="button" class="segment" data-period-type="yearly">Yearly</button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="periodOnlyField" class="field segmented-wrap">
+                <label>Reporting period</label>
+                <div class="segmented" id="periodSegment">
+                  <button type="button" class="segment active" data-period-type="monthly">Monthly</button>
+                  <button type="button" class="segment" data-period-type="yearly">Yearly</button>
+                </div>
+              </div>
+              <input type="hidden" id="expensePeriodType" value="monthly" />
+
+              <div class="field">
+                <label for="expenseNotes">Notes <span class="muted">optional</span></label>
+                <textarea id="expenseNotes" name="notes" rows="3" maxlength="240" placeholder="Add context if useful"></textarea>
+              </div>
+
+              <button id="saveExpenseBtn" class="primary-button" type="submit">Save expense</button>
+            </form>
+          </div>
+
+          <div class="premium-card recent-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Latest entries</p>
+                <h3>Recent submissions</h3>
+              </div>
+            </div>
+            <div id="recentSubmissions" class="recent-list"></div>
+          </div>
+        </section>
+
+        <section id="entriesTab" class="tab-panel" data-tab="entries" aria-label="Entries tab">
+          <div class="premium-card filter-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Ledger</p>
+                <h2>Entries</h2>
+              </div>
+              <button id="clearFiltersBtn" class="ghost-button small" type="button">Reset filters</button>
+            </div>
+
+            <div class="field">
+              <label for="searchInput">Search</label>
+              <input id="searchInput" type="search" placeholder="Search title or notes" />
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="filterMonth">Month</label>
+                <select id="filterMonth"></select>
+              </div>
+              <div class="field">
+                <label for="filterSort">Sort</label>
+                <select id="filterSort">
+                  <option value="date-desc">Newest first</option>
+                  <option value="date-asc">Oldest first</option>
+                  <option value="amount-desc">Amount high to low</option>
+                  <option value="amount-asc">Amount low to high</option>
+                  <option value="created-desc">Recently added</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="filterDateStart">From</label>
+                <input id="filterDateStart" type="date" />
+              </div>
+              <div class="field">
+                <label for="filterDateEnd">To</label>
+                <input id="filterDateEnd" type="date" />
+              </div>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="filterCategory">Category</label>
+                <select id="filterCategory"></select>
+              </div>
+              <div class="field">
+                <label for="filterPaymentMethod">Payment method</label>
+                <select id="filterPaymentMethod"></select>
+              </div>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="filterCostType">Cost type</label>
+                <select id="filterCostType">
+                  <option value="all">All</option>
+                  <option value="one-time">One-time</option>
+                  <option value="recurring">Recurring</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="filterFrequency">Recurring frequency</label>
+                <select id="filterFrequency">
+                  <option value="all">All</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="filterPeriodType">Reporting period</label>
+                <select id="filterPeriodType">
+                  <option value="all">All</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="filterGroup">Group view</label>
+                <select id="filterGroup">
+                  <option value="month">Grouped by month</option>
+                  <option value="none">Flat list</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="premium-card ledger-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Transaction feed</p>
+                <h3 id="entriesCountLabel">0 entries</h3>
+              </div>
+            </div>
+            <div id="entriesList" class="ledger-list"></div>
+          </div>
+        </section>
+
+        <section id="chartsTab" class="tab-panel" data-tab="charts" aria-label="Charts tab">
+          <div class="premium-card filter-card sticky-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Analytics</p>
+                <h2>Charts</h2>
+              </div>
+              <button id="resetChartFiltersBtn" class="ghost-button small" type="button">Reset</button>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="chartCategory">Category</label>
+                <select id="chartCategory"></select>
+              </div>
+              <div class="field">
+                <label for="chartPaymentMethod">Payment method</label>
+                <select id="chartPaymentMethod"></select>
+              </div>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="chartCostType">Cost type</label>
+                <select id="chartCostType">
+                  <option value="all">All</option>
+                  <option value="one-time">One-time</option>
+                  <option value="recurring">Recurring</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="chartFrequency">Recurring frequency</label>
+                <select id="chartFrequency">
+                  <option value="all">All</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="chartMonth">Month</label>
+                <select id="chartMonth"></select>
+              </div>
+              <div class="field">
+                <label for="chartPeriodType">Reporting period</label>
+                <select id="chartPeriodType">
+                  <option value="all">All</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="chartDateStart">From</label>
+                <input id="chartDateStart" type="date" />
+              </div>
+              <div class="field">
+                <label for="chartDateEnd">To</label>
+                <input id="chartDateEnd" type="date" />
+              </div>
+            </div>
+
+            <div class="field-row two-up">
+              <div class="field">
+                <label for="chartCompareWindow">Compare window</label>
+                <select id="chartCompareWindow">
+                  <option value="1">1 month</option>
+                  <option value="2">2 month</option>
+                  <option value="3">3 month</option>
+                  <option value="5">5 month</option>
+                  <option value="12">12 month</option>
+                  <option value="year">1 year</option>
+                </select>
+              </div>
+              <div class="field inline-field">
+                <label>View focus</label>
+                <div id="chartSummaryBadge" class="pill fill-width center-pill">Ready</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-grid">
+            <div class="premium-card chart-card large-chart-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Breakdown</p>
+                  <h3>Category donut</h3>
+                </div>
+                <div id="chartDonutMetric" class="pill">$0.00</div>
+              </div>
+              <div class="chart-wrap donut-wrap">
+                <canvas id="chartsDonutCanvas" width="320" height="320"></canvas>
+              </div>
+              <div id="chartsDonutLegend" class="legend-grid"></div>
+            </div>
+
+            <div class="premium-card chart-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">By category</p>
+                  <h3>Bar chart</h3>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="chartsBarCanvas" width="340" height="240"></canvas>
+              </div>
+            </div>
+
+            <div class="premium-card chart-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Trend</p>
+                  <h3>Monthly line</h3>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="chartsLineCanvas" width="340" height="240"></canvas>
+              </div>
+            </div>
+
+            <div class="premium-card chart-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Composition</p>
+                  <h3>Recurring vs one-time</h3>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="chartsStackCanvas" width="340" height="240"></canvas>
+              </div>
+            </div>
+
+            <div class="premium-card chart-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Payments</p>
+                  <h3>Method breakdown</h3>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="chartsPaymentCanvas" width="340" height="240"></canvas>
+              </div>
+            </div>
+
+            <div class="premium-card insights-card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Comparison</p>
+                  <h3>Window summary</h3>
+                </div>
+              </div>
+              <div id="chartInsights" class="insight-stack"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="settingsTab" class="tab-panel" data-tab="settings" aria-label="Settings tab">
+          <div class="premium-card settings-card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Preferences</p>
+                <h2>Settings</h2>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <h3>Categories</h3>
+              <button id="settingsCategoryBtn" class="secondary-button" type="button">Manage categories</button>
+              <div id="settingsCategoryList" class="settings-list"></div>
+            </div>
+
+            <div class="settings-group">
+              <h3>App preferences</h3>
+              <label class="toggle-row">
+                <span>Subtle motion effects</span>
+                <input id="prefMotion" type="checkbox" />
+              </label>
+              <label class="toggle-row">
+                <span>Show backup reminders</span>
+                <input id="prefBackupReminder" type="checkbox" />
+              </label>
+              <label class="toggle-row">
+                <span>Use accent glow</span>
+                <input id="prefAccentGlow" type="checkbox" />
+              </label>
+            </div>
+
+            <div class="settings-group">
+              <h3>Backup & restore</h3>
+              <div class="button-row wrap">
+                <button id="exportBtn" class="secondary-button" type="button">Export backup</button>
+                <label class="secondary-button file-button">
+                  Import backup
+                  <input id="importFileInput" type="file" accept="application/json" hidden />
+                </label>
+              </div>
+              <p class="muted small-text">Exports categories, payment methods, preferences, and expenses as one JSON file.</p>
+            </div>
+
+            <div class="settings-group">
+              <h3>Storage</h3>
+              <div id="storageStatus" class="storage-card subtle-card"></div>
+            </div>
+
+            <div class="settings-group danger-zone">
+              <h3>Reset</h3>
+              <button id="resetDataBtn" class="danger-button" type="button">Reset all local data</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav glass" aria-label="Primary navigation">
+        <button class="nav-item active" data-tab-target="home" type="button"><span>Home</span></button>
+        <button class="nav-item" data-tab-target="add" type="button"><span>Add</span></button>
+        <button class="nav-item" data-tab-target="entries" type="button"><span>Entries</span></button>
+        <button class="nav-item" data-tab-target="charts" type="button"><span>Charts</span></button>
+        <button class="nav-item" data-tab-target="settings" type="button"><span>Settings</span></button>
+      </nav>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <div id="categorySheet" class="sheet hidden" aria-hidden="true">
+      <div class="sheet-backdrop" data-sheet-close="categorySheet"></div>
+      <div class="sheet-panel">
+        <div class="sheet-handle"></div>
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Category management</p>
+            <h3 id="categorySheetTitle">Add category</h3>
+          </div>
+          <button class="ghost-button small" data-sheet-close="categorySheet" type="button">Close</button>
+        </div>
+
+        <form id="categoryForm" class="stack-form">
+          <input type="hidden" id="categoryId" />
+          <div class="field">
+            <label for="categoryName">Category name</label>
+            <input id="categoryName" type="text" maxlength="40" placeholder="New category" required />
+          </div>
+          <div class="field">
+            <label for="categoryColor">Category color</label>
+            <input id="categoryColor" type="color" value="#8b5cf6" />
+          </div>
+          <button class="primary-button" type="submit">Save category</button>
+        </form>
+
+        <div class="sheet-list-wrap">
+          <div class="card-header tight-header">
+            <h4>Existing categories</h4>
+          </div>
+          <div id="categoryList" class="sheet-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="entrySheet" class="sheet hidden" aria-hidden="true">
+      <div class="sheet-backdrop" data-sheet-close="entrySheet"></div>
+      <div class="sheet-panel">
+        <div class="sheet-handle"></div>
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Entry actions</p>
+            <h3 id="entrySheetTitle">Expense details</h3>
+          </div>
+          <button class="ghost-button small" data-sheet-close="entrySheet" type="button">Close</button>
+        </div>
+        <div id="entrySheetBody" class="sheet-detail"></div>
+        <div class="button-row wrap top-gap">
+          <button id="entryEditBtn" class="secondary-button" type="button">Edit</button>
+          <button id="entryDuplicateBtn" class="secondary-button" type="button">Duplicate</button>
+          <button id="entryDeleteBtn" class="danger-button" type="button">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
