@@ -1,1359 +1,722 @@
-const APP_STORAGE_KEY = 'north-ledger-state-v1';
+const STORAGE_KEY = 'north-ledger-clean-v2';
+const fmtCurrency = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' });
+const fmtMonth = new Intl.DateTimeFormat('en-CA', { month: 'long', year: 'numeric' });
+const fmtShortDate = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
 const TODAY = new Date();
 
-const DEFAULT_CATEGORIES = [
-  { name: 'Home & Living', color: '#5B8CFF' },
-  { name: 'Pleasure', color: '#FF8A65' },
-  { name: 'Subscriptions', color: '#8B5CF6' },
-  { name: 'Online Purchases', color: '#2DD4BF' },
+const defaultCategories = [
+  ['Home & Living', '#5B8CFF'],
+  ['Pleasure', '#FF8A65'],
+  ['Subscriptions', '#8B5CF6'],
+  ['Online Purchases', '#2DD4BF'],
 ];
-
-const DEFAULT_PAYMENT_METHODS = [
-  'Credit Card',
-  'Debit',
-  'Cash',
-  'E-transfer',
-  'Apple Pay',
-  'PayPal',
-];
-
-const MONTH_FORMATTER = new Intl.DateTimeFormat('en-CA', { month: 'long', year: 'numeric' });
-const DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
-const MONTH_KEY_FORMATTER = new Intl.DateTimeFormat('en-CA', { month: 'short', year: '2-digit' });
-const CURRENCY_FORMATTER = new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' });
+const defaultPaymentMethods = ['Credit Card', 'Debit', 'Cash', 'E-transfer', 'Apple Pay', 'PayPal'];
 
 const state = {
   activeTab: 'home',
-  selectedEntryId: null,
+  entrySheetId: null,
   deferredInstallPrompt: null,
-  data: createInitialState(),
+  data: initState(),
 };
 
-const els = {};
+const el = {};
 
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
-  cacheElements();
+  cacheEls();
   loadState();
   bindEvents();
-  populateStaticSelects();
-  applyPreferences();
+  initStaticFilters();
+  resetForm();
   renderAll();
-  registerServiceWorker();
-  setupInstallPrompt();
+  registerSW();
+  initInstall();
 }
 
-function createInitialState() {
+function initState() {
   return {
-    version: 1,
-    categories: DEFAULT_CATEGORIES.map((category) => ({
-      id: uid('cat'),
-      name: category.name,
-      color: category.color,
-      system: true,
-      createdAt: new Date().toISOString(),
-    })),
-    paymentMethods: DEFAULT_PAYMENT_METHODS.map((name) => ({
-      id: uid('pay'),
-      name,
-    })),
+    version: 2,
+    categories: defaultCategories.map(([name, color]) => ({ id: uid('cat'), name, color, system: true, createdAt: new Date().toISOString() })),
+    paymentMethods: defaultPaymentMethods.map((name) => ({ id: uid('pay'), name })),
     expenses: [],
-    preferences: {
-      reduceMotion: false,
-      backupReminder: true,
-      accentGlow: true,
-    },
   };
 }
 
-function cacheElements() {
+function cacheEls() {
   const ids = [
-    'homeFocusMonth', 'homeTotalSpent', 'homeMetricGrid', 'homeTopCategoryBadge', 'homeLegend', 'homeInsights', 'homeTrendBadge',
-    'expenseForm', 'expenseId', 'expenseTitle', 'expenseAmount', 'expenseDate', 'expenseCategory', 'expensePaymentMethod',
-    'expenseCostType', 'expenseRecurringFrequency', 'expenseNotes', 'expensePeriodType', 'saveExpenseBtn', 'clearFormBtn',
-    'recentSubmissions', 'recurringFields', 'periodOnlyField', 'formHeading', 'categoryForm', 'categoryId', 'categoryName', 'categoryColor',
-    'categoryList', 'categorySheet', 'categorySheetTitle', 'openCategorySheetBtn', 'settingsCategoryBtn', 'settingsCategoryList',
-    'entriesList', 'entriesCountLabel', 'searchInput', 'filterMonth', 'filterDateStart', 'filterDateEnd', 'filterCategory', 'filterPaymentMethod',
-    'filterCostType', 'filterFrequency', 'filterPeriodType', 'filterSort', 'filterGroup', 'clearFiltersBtn',
-    'chartCategory', 'chartPaymentMethod', 'chartCostType', 'chartFrequency', 'chartMonth', 'chartDateStart', 'chartDateEnd',
-    'chartPeriodType', 'chartCompareWindow', 'chartSummaryBadge', 'resetChartFiltersBtn', 'chartInsights', 'chartDonutLegend',
-    'chartDonutMetric', 'storageStatus', 'prefMotion', 'prefBackupReminder', 'prefAccentGlow', 'exportBtn', 'importFileInput',
-    'resetDataBtn', 'installBtn', 'toast', 'entrySheet', 'entrySheetBody', 'entryEditBtn', 'entryDuplicateBtn', 'entryDeleteBtn', 'entrySheetTitle'
+    'headerTitle','installBtn','homeTotal','homeMonthLabel','homeTxnCount','homeTopCategory','homeMetrics','homeLegend','homeInsights',
+    'expenseForm','expenseId','expenseTitle','expenseAmount','expenseDate','expenseCategory','expensePaymentMethod','expenseCostType',
+    'expenseRecurringFrequency','expensePeriodType','expenseNotes','recurringRow','formTitle','saveExpenseBtn','resetFormBtn',
+    'openCategorySheetBtn','openCategorySheetSettingsBtn','recentList','clearEntryFiltersBtn','searchInput','filterMonth','filterSort',
+    'filterDateStart','filterDateEnd','filterCategory','filterPaymentMethod','filterCostType','filterFrequency','filterPeriodType',
+    'filterGroup','entriesHeading','entriesList','clearChartFiltersBtn','chartMonth','chartCompareWindow','chartCategory','chartPaymentMethod',
+    'chartCostType','chartFrequency','chartDateStart','chartDateEnd','chartPeriodType','chartSummaryPill','chartLegend','chartInsights',
+    'openCategorySheetSettingsBtn','categorySheet','categorySheetTitle','categoryForm','categoryId','categoryName','categoryColor','categoryList',
+    'settingsCategoryList','entrySheet','entrySheetTitle','entrySheetBody','entryEditBtn','entryDuplicateBtn','entryDeleteBtn',
+    'exportBtn','importInput','storageStatus','resetDataBtn','toast'
   ];
-  ids.forEach((id) => { els[id] = document.getElementById(id); });
-
-  els.tabs = Array.from(document.querySelectorAll('.tab-panel'));
-  els.navItems = Array.from(document.querySelectorAll('.nav-item'));
-  els.costSegments = Array.from(document.querySelectorAll('#costTypeSegment .segment'));
-  els.periodSegments = Array.from(document.querySelectorAll('#periodSegment .segment'));
-  els.periodRecurringSegments = Array.from(document.querySelectorAll('#periodSegmentRecurring .segment'));
-  els.sheetClosers = Array.from(document.querySelectorAll('[data-sheet-close]'));
-  els.jumpChartsBtn = document.querySelector('[data-action="jumpCharts"]');
-
-  els.homeDonutChart = document.getElementById('homeDonutChart');
-  els.homeTrendChart = document.getElementById('homeTrendChart');
-  els.chartsDonutCanvas = document.getElementById('chartsDonutCanvas');
-  els.chartsBarCanvas = document.getElementById('chartsBarCanvas');
-  els.chartsLineCanvas = document.getElementById('chartsLineCanvas');
-  els.chartsStackCanvas = document.getElementById('chartsStackCanvas');
-  els.chartsPaymentCanvas = document.getElementById('chartsPaymentCanvas');
+  ids.forEach((id) => el[id] = document.getElementById(id));
+  el.tabs = [...document.querySelectorAll('.tab')];
+  el.navBtns = [...document.querySelectorAll('.nav-btn')];
+  el.costSegments = [...document.querySelectorAll('#costTypeSegment .segment')];
+  el.periodSegments = [...document.querySelectorAll('#periodSegment .segment, #periodSegmentSingle .segment')];
+  el.sheetCloseBtns = [...document.querySelectorAll('[data-close-sheet]')];
+  el.homeTrendChart = document.getElementById('homeTrendChart');
+  el.homeDonutChart = document.getElementById('homeDonutChart');
+  el.chartDonut = document.getElementById('chartDonut');
+  el.chartLine = document.getElementById('chartLine');
+  el.chartBar = document.getElementById('chartBar');
+  el.chartStack = document.getElementById('chartStack');
+  el.chartPayment = document.getElementById('chartPayment');
 }
 
 function bindEvents() {
-  els.navItems.forEach((button) => {
-    button.addEventListener('click', () => setActiveTab(button.dataset.tabTarget));
-  });
-
-  els.expenseForm.addEventListener('submit', onExpenseSubmit);
-  els.clearFormBtn.addEventListener('click', resetExpenseForm);
-
-  els.costSegments.forEach((button) => {
-    button.addEventListener('click', () => setCostType(button.dataset.costType));
-  });
-  [...els.periodSegments, ...els.periodRecurringSegments].forEach((button) => {
-    button.addEventListener('click', () => setPeriodType(button.dataset.periodType));
-  });
-
-  els.categoryForm.addEventListener('submit', onCategorySubmit);
-  els.openCategorySheetBtn.addEventListener('click', () => openSheet('categorySheet'));
-  els.settingsCategoryBtn.addEventListener('click', () => openSheet('categorySheet'));
-  els.sheetClosers.forEach((button) => {
-    button.addEventListener('click', () => closeSheet(button.dataset.sheetClose));
-  });
-
+  el.navBtns.forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tabTarget)));
+  el.expenseForm.addEventListener('submit', saveExpense);
+  el.resetFormBtn.addEventListener('click', resetForm);
+  el.costSegments.forEach((btn) => btn.addEventListener('click', () => setCostType(btn.dataset.costType)));
+  el.periodSegments.forEach((btn) => btn.addEventListener('click', () => setPeriodType(btn.dataset.periodType)));
+  el.openCategorySheetBtn.addEventListener('click', () => openSheet('categorySheet'));
+  el.openCategorySheetSettingsBtn.addEventListener('click', () => openSheet('categorySheet'));
+  el.categoryForm.addEventListener('submit', saveCategory);
+  el.sheetCloseBtns.forEach((btn) => btn.addEventListener('click', () => closeSheet(btn.dataset.closeSheet)));
   [
-    els.searchInput, els.filterMonth, els.filterDateStart, els.filterDateEnd, els.filterCategory, els.filterPaymentMethod,
-    els.filterCostType, els.filterFrequency, els.filterPeriodType, els.filterSort, els.filterGroup,
-    els.chartCategory, els.chartPaymentMethod, els.chartCostType, els.chartFrequency, els.chartMonth, els.chartDateStart,
-    els.chartDateEnd, els.chartPeriodType, els.chartCompareWindow
-  ].forEach((input) => input.addEventListener('input', renderAll));
-
-  els.clearFiltersBtn.addEventListener('click', resetEntriesFilters);
-  els.resetChartFiltersBtn.addEventListener('click', resetChartFilters);
-
-  els.exportBtn.addEventListener('click', exportBackup);
-  els.importFileInput.addEventListener('change', importBackup);
-  els.resetDataBtn.addEventListener('click', resetAllData);
-
-  els.prefMotion.addEventListener('change', updatePreferencesFromControls);
-  els.prefBackupReminder.addEventListener('change', updatePreferencesFromControls);
-  els.prefAccentGlow.addEventListener('change', updatePreferencesFromControls);
-
-  els.entryEditBtn.addEventListener('click', editSelectedEntry);
-  els.entryDuplicateBtn.addEventListener('click', duplicateSelectedEntry);
-  els.entryDeleteBtn.addEventListener('click', deleteSelectedEntry);
-  els.jumpChartsBtn?.addEventListener('click', () => setActiveTab('charts'));
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      closeSheet('categorySheet');
-      closeSheet('entrySheet');
-    }
-  });
+    el.searchInput, el.filterMonth, el.filterSort, el.filterDateStart, el.filterDateEnd, el.filterCategory, el.filterPaymentMethod,
+    el.filterCostType, el.filterFrequency, el.filterPeriodType, el.filterGroup,
+    el.chartMonth, el.chartCompareWindow, el.chartCategory, el.chartPaymentMethod, el.chartCostType, el.chartFrequency,
+    el.chartDateStart, el.chartDateEnd, el.chartPeriodType
+  ].forEach((node) => node.addEventListener('input', renderAll));
+  el.clearEntryFiltersBtn.addEventListener('click', resetEntryFilters);
+  el.clearChartFiltersBtn.addEventListener('click', resetChartFilters);
+  el.entryEditBtn.addEventListener('click', editFromSheet);
+  el.entryDuplicateBtn.addEventListener('click', duplicateFromSheet);
+  el.entryDeleteBtn.addEventListener('click', deleteFromSheet);
+  el.exportBtn.addEventListener('click', exportBackup);
+  el.importInput.addEventListener('change', importBackup);
+  el.resetDataBtn.addEventListener('click', resetAllData);
+  window.addEventListener('resize', () => { if (state.activeTab === 'home') renderHome(); if (state.activeTab === 'charts') renderCharts(); });
 }
 
-function populateStaticSelects() {
-  const monthOptions = buildMonthOptions();
-  setOptions(els.filterMonth, [{ value: 'all', label: 'All months' }, ...monthOptions]);
-  setOptions(els.chartMonth, [{ value: 'all', label: 'All months' }, ...monthOptions]);
-  els.filterMonth.value = getCurrentMonthKey();
-  els.chartMonth.value = 'all';
-  els.expenseDate.value = toDateInputValue(TODAY);
-}
-
-function buildMonthOptions() {
-  const start = new Date(TODAY.getFullYear() - 1, TODAY.getMonth(), 1);
-  const options = [];
-  for (let i = 0; i < 24; i += 1) {
-    const date = new Date(start.getFullYear(), start.getMonth() + i, 1);
-    const value = getMonthKey(date);
-    options.push({ value, label: MONTH_FORMATTER.format(date) });
-  }
-  return options.reverse();
+function initStaticFilters() {
+  const months = buildMonthOptions();
+  fillSelect(el.filterMonth, [{ value: 'all', label: 'All months' }, ...months]);
+  fillSelect(el.chartMonth, [{ value: 'all', label: 'All months' }, ...months]);
+  el.filterMonth.value = currentMonthKey();
+  el.chartMonth.value = 'all';
 }
 
 function loadState() {
-  const raw = localStorage.getItem(APP_STORAGE_KEY);
+  const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) return;
   try {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return;
-    state.data = normalizeImportedState(parsed);
-  } catch (error) {
-    console.error('Failed to load local data', error);
-    showToast('Could not read saved data. Using a clean local setup.');
+    state.data = normalizeState(parsed);
+  } catch (err) {
+    toast('Could not load local data.');
   }
 }
 
-function saveState() {
-  localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(state.data));
-}
-
-function normalizeImportedState(input) {
-  const clean = createInitialState();
-  clean.categories = Array.isArray(input.categories) && input.categories.length ? input.categories.map((category) => ({
-    id: category.id || uid('cat'),
-    name: String(category.name || 'Untitled'),
-    color: category.color || randomColor(),
-    system: Boolean(category.system),
-    createdAt: category.createdAt || new Date().toISOString(),
-  })) : clean.categories;
-
-  clean.paymentMethods = Array.isArray(input.paymentMethods) && input.paymentMethods.length ? input.paymentMethods.map((method) => ({
-    id: method.id || uid('pay'),
-    name: String(method.name || 'Method'),
-  })) : clean.paymentMethods;
-
-  clean.expenses = Array.isArray(input.expenses) ? input.expenses.map((expense) => ({
-    id: expense.id || uid('exp'),
-    title: String(expense.title || ''),
-    amount: Number(expense.amount || 0),
-    date: expense.date || toDateInputValue(TODAY),
-    categoryId: resolveCategoryId(expense.categoryId, clean.categories),
-    paymentMethodId: resolvePaymentMethodId(expense.paymentMethodId, clean.paymentMethods),
-    costType: expense.costType === 'recurring' ? 'recurring' : 'one-time',
-    recurringFrequency: expense.recurringFrequency || 'monthly',
-    notes: String(expense.notes || ''),
-    periodType: expense.periodType === 'yearly' ? 'yearly' : 'monthly',
-    createdAt: expense.createdAt || new Date().toISOString(),
-    updatedAt: expense.updatedAt || new Date().toISOString(),
-  })) : [];
-
-  clean.preferences = {
-    reduceMotion: Boolean(input.preferences?.reduceMotion),
-    backupReminder: input.preferences?.backupReminder !== false,
-    accentGlow: input.preferences?.accentGlow !== false,
-  };
+function normalizeState(input) {
+  const clean = initState();
+  if (Array.isArray(input.categories) && input.categories.length) {
+    clean.categories = input.categories.map((c) => ({
+      id: c.id || uid('cat'), name: String(c.name || 'Category'), color: c.color || '#7c5cff', system: !!c.system, createdAt: c.createdAt || new Date().toISOString()
+    }));
+  }
+  if (Array.isArray(input.paymentMethods) && input.paymentMethods.length) {
+    clean.paymentMethods = input.paymentMethods.map((m) => ({ id: m.id || uid('pay'), name: String(m.name || 'Method') }));
+  }
+  if (Array.isArray(input.expenses)) {
+    clean.expenses = input.expenses.map((x) => ({
+      id: x.id || uid('exp'),
+      title: String(x.title || ''),
+      amount: Number(x.amount || 0),
+      date: x.date || dateInput(TODAY),
+      categoryId: clean.categories.some((c) => c.id === x.categoryId) ? x.categoryId : clean.categories[0].id,
+      paymentMethodId: clean.paymentMethods.some((m) => m.id === x.paymentMethodId) ? x.paymentMethodId : clean.paymentMethods[0].id,
+      costType: x.costType === 'recurring' ? 'recurring' : 'one-time',
+      recurringFrequency: ['weekly','monthly','yearly'].includes(x.recurringFrequency) ? x.recurringFrequency : 'monthly',
+      notes: String(x.notes || ''),
+      periodType: x.periodType === 'yearly' ? 'yearly' : 'monthly',
+      createdAt: x.createdAt || new Date().toISOString(),
+      updatedAt: x.updatedAt || new Date().toISOString(),
+    }));
+  }
   return clean;
 }
 
-function resolveCategoryId(categoryId, categories) {
-  return categories.some((item) => item.id === categoryId) ? categoryId : categories[0].id;
-}
-
-function resolvePaymentMethodId(paymentMethodId, methods) {
-  return methods.some((item) => item.id === paymentMethodId) ? paymentMethodId : methods[0].id;
-}
+function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data)); }
 
 function renderAll() {
-  saveState();
-  populateDynamicSelects();
+  persist();
+  fillDynamicSelects();
   renderHome();
-  renderRecentSubmissions();
+  renderRecent();
   renderEntries();
   renderCharts();
   renderCategories();
-  renderSettings();
+  renderStorage();
 }
 
-function populateDynamicSelects() {
-  const categories = state.data.categories.map((category) => ({ value: category.id, label: category.name }));
-  const methods = state.data.paymentMethods.map((method) => ({ value: method.id, label: method.name }));
-
-  preserveSelectValue(els.expenseCategory, categories, categories[0]?.value || '');
-  preserveSelectValue(els.expensePaymentMethod, methods, methods[0]?.value || '');
-  preserveSelectValue(els.filterCategory, [{ value: 'all', label: 'All categories' }, ...categories], 'all');
-  preserveSelectValue(els.filterPaymentMethod, [{ value: 'all', label: 'All payment methods' }, ...methods], 'all');
-  preserveSelectValue(els.chartCategory, [{ value: 'all', label: 'All categories' }, ...categories], 'all');
-  preserveSelectValue(els.chartPaymentMethod, [{ value: 'all', label: 'All payment methods' }, ...methods], 'all');
-}
-
-function preserveSelectValue(select, options, fallback) {
-  const currentValue = select.value;
-  setOptions(select, options);
-  select.value = options.some((option) => option.value === currentValue) ? currentValue : fallback;
-}
-
-function setOptions(select, options) {
-  select.innerHTML = '';
-  options.forEach((option) => {
-    const node = document.createElement('option');
-    node.value = option.value;
-    node.textContent = option.label;
-    select.appendChild(node);
-  });
+function fillDynamicSelects() {
+  const cats = state.data.categories.map((c) => ({ value: c.id, label: c.name }));
+  const methods = state.data.paymentMethods.map((m) => ({ value: m.id, label: m.name }));
+  preserveSelect(el.expenseCategory, cats, cats[0]?.value || '');
+  preserveSelect(el.expensePaymentMethod, methods, methods[0]?.value || '');
+  preserveSelect(el.filterCategory, [{ value: 'all', label: 'All categories' }, ...cats], 'all');
+  preserveSelect(el.filterPaymentMethod, [{ value: 'all', label: 'All payment methods' }, ...methods], 'all');
+  preserveSelect(el.chartCategory, [{ value: 'all', label: 'All categories' }, ...cats], 'all');
+  preserveSelect(el.chartPaymentMethod, [{ value: 'all', label: 'All payment methods' }, ...methods], 'all');
 }
 
 function renderHome() {
-  const monthKey = getCurrentMonthKey();
-  const monthExpenses = state.data.expenses.filter((expense) => getMonthKey(expense.date) === monthKey);
-  const total = sumAmounts(monthExpenses);
-  const recurring = sumAmounts(monthExpenses.filter((item) => item.costType === 'recurring'));
-  const oneTime = sumAmounts(monthExpenses.filter((item) => item.costType === 'one-time'));
-  const biggest = monthExpenses.slice().sort((a, b) => b.amount - a.amount)[0];
-  const average = monthExpenses.length ? total / monthExpenses.length : 0;
-  const monthlySeries = buildMonthlySeries(state.data.expenses, 6);
-  const trendDirection = monthlySeries.length >= 2 ? monthlySeries[monthlySeries.length - 1].value - monthlySeries[monthlySeries.length - 2].value : 0;
-  const categoryTotals = aggregateByCategory(monthExpenses).slice(0, 6);
-  const topCategory = categoryTotals[0];
+  const monthKey = currentMonthKey();
+  const entries = state.data.expenses.filter((e) => monthKeyFromDate(e.date) === monthKey);
+  const total = sum(entries);
+  const recurring = sum(entries.filter((e) => e.costType === 'recurring'));
+  const oneTime = total - recurring;
+  const biggest = entries.slice().sort((a,b) => b.amount - a.amount)[0];
+  const avg = entries.length ? total / entries.length : 0;
+  const cats = aggregateByCategory(entries);
+  const methods = aggregateByPayment(entries);
+  const trend = buildMonthlyTrend(state.data.expenses, 6);
 
-  els.homeFocusMonth.textContent = MONTH_FORMATTER.format(parseMonthKey(monthKey));
-  els.homeTotalSpent.textContent = formatCurrency(total);
-  els.homeTopCategoryBadge.textContent = topCategory ? `${topCategory.name} · ${formatCurrency(topCategory.total)}` : 'No entries yet';
-  els.homeTrendBadge.textContent = trendDirection > 0 ? 'Up from last month' : trendDirection < 0 ? 'Down from last month' : 'Stable';
+  el.headerTitle.textContent = cap(state.activeTab);
+  el.homeMonthLabel.textContent = fmtMonth.format(parseMonthKey(monthKey));
+  el.homeTotal.textContent = money(total);
+  el.homeTxnCount.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+  el.homeTopCategory.textContent = cats[0] ? cats[0].name : 'No category yet';
 
   const metrics = [
-    { label: 'Recurring total', value: formatCurrency(recurring) },
-    { label: 'One-time total', value: formatCurrency(oneTime) },
-    { label: 'Biggest expense', value: biggest ? formatCurrency(biggest.amount) : '—' },
-    { label: 'Transactions', value: String(monthExpenses.length) },
-    { label: 'Average spend', value: formatCurrency(average) },
-    { label: 'Top category', value: topCategory ? topCategory.name : '—' },
+    ['Recurring total', money(recurring)],
+    ['One-time total', money(oneTime)],
+    ['Average spend', money(avg)],
+    ['Biggest expense', biggest ? money(biggest.amount) : '—'],
+    ['Top payment', methods[0] ? methods[0].name : '—'],
+    ['Top category', cats[0] ? cats[0].name : '—'],
   ];
-
-  els.homeMetricGrid.innerHTML = metrics.map((metric) => `
-    <div class="metric-card">
-      <p class="eyebrow">${escapeHtml(metric.label)}</p>
-      <div class="metric-value">${escapeHtml(metric.value)}</div>
-    </div>
-  `).join('');
-
-  renderLegend(els.homeLegend, categoryTotals);
-  renderInsights(els.homeInsights, buildHomeInsights({ total, recurring, oneTime, biggest, average, categoryTotals, monthlySeries }));
-  drawDonutChart(els.homeDonutChart, categoryTotals);
-  drawLineChart(els.homeTrendChart, monthlySeries, { showArea: true });
+  el.homeMetrics.innerHTML = metrics.map(([label, value]) => `<div class="metric"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div></div>`).join('');
+  el.homeLegend.innerHTML = cats.length ? cats.slice(0,6).map(legendItem).join('') : `<div class="empty">Add expenses to see the category mix.</div>`;
+  el.homeInsights.innerHTML = homeInsights({ total, recurring, oneTime, biggest, avg, cats, trend }).map(insightItem).join('');
+  drawDonut(el.homeDonutChart, cats);
+  drawLine(el.homeTrendChart, trend, true);
 }
 
-function buildHomeInsights({ total, recurring, oneTime, biggest, average, categoryTotals, monthlySeries }) {
-  const previous = monthlySeries.at(-2)?.value || 0;
-  const current = monthlySeries.at(-1)?.value || 0;
-  const delta = current - previous;
-  const topCategory = categoryTotals[0];
-  return [
-    {
-      icon: '◎',
-      text: topCategory ? `${topCategory.name} is leading this month at ${formatCurrency(topCategory.total)}.` : 'Start logging expenses to unlock category insights.',
-    },
-    {
-      icon: '↕',
-      text: previous ? `Spending is ${delta >= 0 ? 'up' : 'down'} ${formatCurrency(Math.abs(delta))} versus last month.` : `Average spend this month is ${formatCurrency(average)} per transaction.`,
-    },
-    {
-      icon: '⟳',
-      text: recurring ? `Recurring expenses account for ${Math.round((recurring / Math.max(total, 1)) * 100)}% of this month.` : `You currently have no recurring expenses logged for this month.`,
-    },
-    {
-      icon: '◆',
-      text: biggest ? `Largest transaction: ${biggest.title} at ${formatCurrency(biggest.amount)}.` : 'Largest transaction insight will appear here once you add entries.',
-    },
-    {
-      icon: '⋯',
-      text: oneTime > recurring ? 'One-time spending is driving most of your recent outflow.' : 'Recurring commitments are the main driver of spend right now.',
-    },
-  ];
-}
-
-function renderRecentSubmissions() {
-  const recent = state.data.expenses.slice().sort(sortByCreatedDesc).slice(0, 8);
-  if (!recent.length) {
-    els.recentSubmissions.innerHTML = '<div class="empty-state">Recent submissions will appear here after you log your first expense.</div>';
-    return;
-  }
-  els.recentSubmissions.innerHTML = recent.map((expense) => {
-    const category = getCategoryById(expense.categoryId);
-    return `
-      <div class="recent-item">
-        <button class="recent-button" type="button" data-edit-expense="${expense.id}">
-          <div class="ledger-title-row">
-            <span class="category-dot" style="background:${category.color}"></span>
-            <span class="ledger-title">${escapeHtml(expense.title)}</span>
-            <span class="ledger-amount">${formatCurrency(expense.amount)}</span>
-          </div>
-          <div class="meta-row top-gap">
-            <span class="meta-chip">${escapeHtml(formatShortDate(expense.date))}</span>
-            <span class="meta-chip">${escapeHtml(category.name)}</span>
-            <span class="meta-chip">${escapeHtml(getPaymentMethodName(expense.paymentMethodId))}</span>
-          </div>
-        </button>
+function renderRecent() {
+  const recent = state.data.expenses.slice().sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0,8);
+  el.recentList.innerHTML = recent.length ? recent.map((e) => {
+    const c = getCategory(e.categoryId);
+    return `<button class="ledger-row" type="button" data-edit-entry="${e.id}">
+      <span class="entry-dot" style="background:${c.color}"></span>
+      <div class="ledger-main">
+        <div class="row-title">${esc(e.title)}</div>
+        <div class="meta">
+          <span class="chip">${esc(c.name)}</span>
+          <span class="chip">${esc(shortDate(e.date))}</span>
+          <span class="chip">${esc(getPaymentName(e.paymentMethodId))}</span>
+        </div>
       </div>
-    `;
-  }).join('');
-
-  els.recentSubmissions.querySelectorAll('[data-edit-expense]').forEach((button) => {
-    button.addEventListener('click', () => beginEditExpense(button.dataset.editExpense));
-  });
+      <div class="row-amount">${money(e.amount)}</div>
+    </button>`;
+  }).join('') : `<div class="empty">Your latest saved expenses appear here.</div>`;
+  [...el.recentList.querySelectorAll('[data-edit-entry]')].forEach((btn) => btn.addEventListener('click', () => beginEdit(btn.dataset.editEntry)));
 }
 
 function renderEntries() {
-  const entries = getFilteredEntries(getEntryFilters());
-  els.entriesCountLabel.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
-
-  if (!entries.length) {
-    els.entriesList.innerHTML = '<div class="empty-state">No entries match these filters.</div>';
+  const rows = filteredEntries(entryFilters());
+  el.entriesHeading.textContent = `${rows.length} ${rows.length === 1 ? 'entry' : 'entries'}`;
+  if (!rows.length) {
+    el.entriesList.innerHTML = `<div class="empty">No entries match these filters.</div>`;
     return;
   }
-
-  const grouped = els.filterGroup.value === 'month' ? groupEntriesByMonth(entries) : [{ monthKey: 'all', items: entries }];
-  els.entriesList.innerHTML = grouped.map((group) => {
-    const label = group.monthKey === 'all' ? '' : `
-      <div class="ledger-month-header glass">
-        <strong>${escapeHtml(MONTH_FORMATTER.format(parseMonthKey(group.monthKey)))}</strong>
-      </div>`;
-    const rows = group.items.map((expense) => renderLedgerRow(expense)).join('');
-    return `<div class="ledger-section">${label}${rows}</div>`;
+  const groups = el.filterGroup.value === 'month' ? groupByMonth(rows) : [{ key: 'all', items: rows }];
+  el.entriesList.innerHTML = groups.map((group) => {
+    const label = group.key === 'all' ? '' : `<div class="month-head">${esc(fmtMonth.format(parseMonthKey(group.key)))}</div>`;
+    const items = group.items.map(entryRow).join('');
+    return `<div class="ledger-month">${label}${items}</div>`;
   }).join('');
-
-  els.entriesList.querySelectorAll('[data-entry-id]').forEach((row) => {
-    row.addEventListener('click', () => openEntrySheet(row.dataset.entryId));
-  });
+  [...el.entriesList.querySelectorAll('[data-entry-open]')].forEach((btn) => btn.addEventListener('click', () => openEntrySheet(btn.dataset.entryOpen)));
 }
 
-function renderLedgerRow(expense) {
-  const category = getCategoryById(expense.categoryId);
-  const recurringLabel = expense.costType === 'recurring' ? expense.recurringFrequency : 'One-time';
-  return `
-    <button class="ledger-row" type="button" data-entry-id="${expense.id}">
-      <span class="ledger-marker" style="background:${category.color}"></span>
-      <div class="ledger-main">
-        <div class="ledger-title-row">
-          <span class="ledger-title">${escapeHtml(expense.title)}</span>
-        </div>
-        <div class="meta-row top-gap">
-          <span class="meta-chip category-chip" style="background:${category.color}22;border:1px solid ${category.color}55;color:${category.color};">${escapeHtml(category.name)}</span>
-          <span class="meta-chip">${escapeHtml(formatShortDate(expense.date))}</span>
-          <span class="meta-chip">${escapeHtml(getPaymentMethodName(expense.paymentMethodId))}</span>
-          <span class="meta-chip">${escapeHtml(recurringLabel)}</span>
-          <span class="meta-chip">${escapeHtml(expense.periodType)}</span>
-        </div>
+function entryRow(e) {
+  const c = getCategory(e.categoryId);
+  return `<button class="ledger-row" type="button" data-entry-open="${e.id}">
+    <span class="entry-dot" style="background:${c.color}"></span>
+    <div class="ledger-main">
+      <div class="row-title">${esc(e.title)}</div>
+      <div class="meta">
+        <span class="chip" style="border:1px solid ${c.color}55;color:${c.color}">${esc(c.name)}</span>
+        <span class="chip">${esc(shortDate(e.date))}</span>
+        <span class="chip">${esc(getPaymentName(e.paymentMethodId))}</span>
+        <span class="chip">${esc(e.costType === 'recurring' ? e.recurringFrequency : 'one-time')}</span>
+        <span class="chip">${esc(e.periodType)}</span>
       </div>
-      <div class="ledger-amount">${formatCurrency(expense.amount)}</div>
-    </button>
-  `;
+    </div>
+    <div class="row-amount">${money(e.amount)}</div>
+  </button>`;
 }
 
 function renderCharts() {
-  const filters = getChartFilters();
-  const entries = getFilteredEntries(filters);
-  const categoryTotals = aggregateByCategory(entries);
-  const paymentTotals = aggregateByPaymentMethod(entries);
-  const monthlySeries = buildMonthlySeries(entries, resolveCompareWindow(filters.compareWindow));
-  const recurringSeries = buildRecurringVsOneTimeSeries(entries, resolveCompareWindow(filters.compareWindow));
-  const total = sumAmounts(entries);
-  const topCategory = categoryTotals[0];
-  const topMethod = paymentTotals[0];
-
-  els.chartSummaryBadge.textContent = entries.length ? `${entries.length} entries · ${formatCurrency(total)}` : 'No matching data';
-  els.chartDonutMetric.textContent = formatCurrency(total);
-  renderLegend(els.chartDonutLegend, categoryTotals.slice(0, 8));
-  renderInsights(els.chartInsights, buildChartInsights({ entries, categoryTotals, paymentTotals, monthlySeries, recurringSeries, total }));
-
-  drawDonutChart(els.chartsDonutCanvas, categoryTotals);
-  drawBarChart(els.chartsBarCanvas, categoryTotals.slice(0, 8));
-  drawLineChart(els.chartsLineCanvas, monthlySeries, { showArea: false });
-  drawStackedChart(els.chartsStackCanvas, recurringSeries);
-  drawBarChart(els.chartsPaymentCanvas, paymentTotals.slice(0, 8), { horizontal: true, useSourceColor: false });
-
-  if (topCategory) {
-    els.chartSummaryBadge.textContent += ` · ${topCategory.name} leads`;
-  } else if (topMethod) {
-    els.chartSummaryBadge.textContent += ` · ${topMethod.name}`;
-  }
-}
-
-function buildChartInsights({ entries, categoryTotals, paymentTotals, monthlySeries, recurringSeries, total }) {
-  const recurringTotal = entries.filter((entry) => entry.costType === 'recurring').reduce((sum, item) => sum + item.amount, 0);
-  const oneTimeTotal = total - recurringTotal;
-  const monthsWithData = monthlySeries.filter((item) => item.value > 0).length;
-  const peakMonth = monthlySeries.slice().sort((a, b) => b.value - a.value)[0];
-  return [
-    {
-      icon: '◔',
-      text: categoryTotals[0] ? `${categoryTotals[0].name} is the biggest category at ${formatCurrency(categoryTotals[0].total)}.` : 'No category data for the selected filters yet.',
-    },
-    {
-      icon: '◫',
-      text: paymentTotals[0] ? `${paymentTotals[0].name} is the most used payment method by spend.` : 'Payment method trends will appear once data is available.',
-    },
-    {
-      icon: '▣',
-      text: total ? `Recurring vs one-time: ${formatCurrency(recurringTotal)} recurring and ${formatCurrency(oneTimeTotal)} one-time.` : 'Adjust filters or add entries to compare recurring and one-time costs.',
-    },
-    {
-      icon: '↗',
-      text: peakMonth ? `Peak month in this window: ${peakMonth.label} at ${formatCurrency(peakMonth.value)}.` : 'Peak month insight is waiting for more data.',
-    },
-    {
-      icon: '◌',
-      text: `${monthsWithData} active ${monthsWithData === 1 ? 'month' : 'months'} inside the selected comparison window.`,
-    },
-  ];
+  const filters = chartFilters();
+  const rows = filteredEntries(filters);
+  const cats = aggregateByCategory(rows);
+  const methods = aggregateByPayment(rows);
+  const trend = buildMonthlyTrend(rows, compareWindow(filters.compareWindow));
+  const stack = buildRecurringTrend(rows, compareWindow(filters.compareWindow));
+  const total = sum(rows);
+  el.chartSummaryPill.textContent = rows.length ? `${rows.length} entries · ${money(total)}` : 'No matching data';
+  el.chartLegend.innerHTML = cats.length ? cats.slice(0,8).map(legendItem).join('') : `<div class="empty">No category data for the current filters.</div>`;
+  el.chartInsights.innerHTML = chartInsights({ rows, cats, methods, trend, stack, total }).map(insightItem).join('');
+  drawDonut(el.chartDonut, cats);
+  drawLine(el.chartLine, trend, false);
+  drawBar(el.chartBar, cats.slice(0,8));
+  drawStack(el.chartStack, stack);
+  drawHorizontalBar(el.chartPayment, methods.slice(0,8));
 }
 
 function renderCategories() {
-  const usage = getCategoryUsageMap();
-  const markup = state.data.categories.map((category) => `
-    <div class="sheet-item">
-      <div class="ledger-title-row">
-        <span class="category-dot" style="background:${category.color}"></span>
-        <span class="ledger-title">${escapeHtml(category.name)}</span>
-        <span class="meta-chip">${usage.get(category.id) || 0} entries</span>
+  const usage = usageMap();
+  const markup = state.data.categories.map((c) => `
+    <div class="category-item">
+      <div class="legend-item" style="padding:0;border:0;background:none;">
+        <span class="category-dot" style="background:${c.color}"></span>
+        <div><div class="legend-name">${esc(c.name)}</div><div class="legend-meta">${usage.get(c.id) || 0} entries</div></div>
       </div>
-      <div class="button-row wrap top-gap">
-        <button class="secondary-button small" type="button" data-category-edit="${category.id}">Edit</button>
-        <button class="danger-button small" type="button" data-category-delete="${category.id}" ${usage.get(category.id) ? 'disabled' : ''}>Delete</button>
+      <div class="button-row top-gap">
+        <button class="button secondary small" data-category-edit="${c.id}" type="button">Edit</button>
+        <button class="button danger small" data-category-delete="${c.id}" type="button" ${usage.get(c.id) ? 'disabled' : ''}>Delete</button>
       </div>
-    </div>
-  `).join('');
-
-  els.categoryList.innerHTML = markup || '<div class="empty-state">No categories yet.</div>';
-  els.settingsCategoryList.innerHTML = markup || '<div class="empty-state">No categories yet.</div>';
-
-  document.querySelectorAll('[data-category-edit]').forEach((button) => {
-    button.addEventListener('click', () => fillCategoryForm(button.dataset.categoryEdit));
-  });
-  document.querySelectorAll('[data-category-delete]').forEach((button) => {
-    button.addEventListener('click', () => deleteCategory(button.dataset.categoryDelete));
-  });
+    </div>`).join('');
+  el.categoryList.innerHTML = markup || `<div class="empty">No categories.</div>`;
+  el.settingsCategoryList.innerHTML = markup || `<div class="empty">No categories.</div>`;
+  [...document.querySelectorAll('[data-category-edit]')].forEach((btn) => btn.addEventListener('click', () => loadCategory(btn.dataset.categoryEdit)));
+  [...document.querySelectorAll('[data-category-delete]')].forEach((btn) => btn.addEventListener('click', () => removeCategory(btn.dataset.categoryDelete)));
 }
 
-function renderSettings() {
-  els.prefMotion.checked = state.data.preferences.reduceMotion;
-  els.prefBackupReminder.checked = state.data.preferences.backupReminder;
-  els.prefAccentGlow.checked = state.data.preferences.accentGlow;
-
-  const raw = localStorage.getItem(APP_STORAGE_KEY) || '';
-  const usageKb = (new Blob([raw]).size / 1024).toFixed(1);
-  els.storageStatus.innerHTML = `
-    <div>Local storage is active for this device and browser.</div>
-    <div class="storage-metrics">
-      <div class="storage-item"><div class="eyebrow">Entries</div><strong>${state.data.expenses.length}</strong></div>
-      <div class="storage-item"><div class="eyebrow">Categories</div><strong>${state.data.categories.length}</strong></div>
-      <div class="storage-item"><div class="eyebrow">Payment methods</div><strong>${state.data.paymentMethods.length}</strong></div>
-      <div class="storage-item"><div class="eyebrow">Approx. storage</div><strong>${usageKb} KB</strong></div>
-    </div>
-  `;
+function renderStorage() {
+  const raw = localStorage.getItem(STORAGE_KEY) || '';
+  const sizeKB = (new Blob([raw]).size / 1024).toFixed(1);
+  el.storageStatus.innerHTML = `Entries: <strong>${state.data.expenses.length}</strong><br>Categories: <strong>${state.data.categories.length}</strong><br>Storage used: <strong>${sizeKB} KB</strong>`;
 }
 
-function onExpenseSubmit(event) {
-  event.preventDefault();
-  const title = els.expenseTitle.value.trim();
-  const amount = Number(els.expenseAmount.value);
-  if (!title || !amount || amount <= 0 || !els.expenseDate.value) {
-    showToast('Enter a title, valid amount, and date.');
+function saveExpense(ev) {
+  ev.preventDefault();
+  const title = el.expenseTitle.value.trim();
+  const amount = Number(el.expenseAmount.value);
+  const date = el.expenseDate.value;
+  if (!title || !amount || amount <= 0 || !date) {
+    toast('Add a title, amount, and date.');
     return;
   }
-
   const payload = {
-    id: els.expenseId.value || uid('exp'),
+    id: el.expenseId.value || uid('exp'),
     title,
-    amount: roundMoney(amount),
-    date: els.expenseDate.value,
-    categoryId: els.expenseCategory.value,
-    paymentMethodId: els.expensePaymentMethod.value,
-    costType: els.expenseCostType.value,
-    recurringFrequency: els.expenseCostType.value === 'recurring' ? els.expenseRecurringFrequency.value : 'monthly',
-    notes: els.expenseNotes.value.trim(),
-    periodType: els.expensePeriodType.value,
-    createdAt: els.expenseId.value ? getExpenseById(els.expenseId.value)?.createdAt || new Date().toISOString() : new Date().toISOString(),
+    amount: round(amount),
+    date,
+    categoryId: el.expenseCategory.value,
+    paymentMethodId: el.expensePaymentMethod.value,
+    costType: el.expenseCostType.value,
+    recurringFrequency: el.expenseCostType.value === 'recurring' ? el.expenseRecurringFrequency.value : 'monthly',
+    notes: el.expenseNotes.value.trim(),
+    periodType: el.expensePeriodType.value,
+    createdAt: el.expenseId.value ? (state.data.expenses.find((x) => x.id === el.expenseId.value)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-
-  const existingIndex = state.data.expenses.findIndex((item) => item.id === payload.id);
-  if (existingIndex >= 0) {
-    state.data.expenses.splice(existingIndex, 1, payload);
-    showToast('Expense updated.');
+  const idx = state.data.expenses.findIndex((x) => x.id === payload.id);
+  if (idx >= 0) {
+    state.data.expenses.splice(idx, 1, payload);
+    toast('Entry updated.');
   } else {
     state.data.expenses.unshift(payload);
-    showToast('Expense saved.');
+    toast('Entry saved.');
   }
-
-  resetExpenseForm();
+  resetForm();
   renderAll();
-  setActiveTab('add');
+  switchTab('entries');
 }
 
-function beginEditExpense(expenseId) {
-  const expense = getExpenseById(expenseId);
-  if (!expense) return;
-  els.expenseId.value = expense.id;
-  els.expenseTitle.value = expense.title;
-  els.expenseAmount.value = expense.amount;
-  els.expenseDate.value = expense.date;
-  els.expenseCategory.value = expense.categoryId;
-  els.expensePaymentMethod.value = expense.paymentMethodId;
-  els.expenseNotes.value = expense.notes || '';
-  setCostType(expense.costType);
-  setPeriodType(expense.periodType);
-  els.expenseRecurringFrequency.value = expense.recurringFrequency || 'monthly';
-  els.formHeading.textContent = 'Edit expense';
-  els.saveExpenseBtn.textContent = 'Update expense';
-  setActiveTab('add');
-  window.scrollTo({ top: 0, behavior: state.data.preferences.reduceMotion ? 'auto' : 'smooth' });
-}
-
-function resetExpenseForm() {
-  els.expenseForm.reset();
-  els.expenseId.value = '';
-  els.expenseDate.value = toDateInputValue(TODAY);
-  els.expenseCategory.value = state.data.categories[0]?.id || '';
-  els.expensePaymentMethod.value = state.data.paymentMethods[0]?.id || '';
+function resetForm() {
+  el.expenseForm.reset();
+  el.expenseId.value = '';
+  el.expenseDate.value = dateInput(TODAY);
+  el.formTitle.textContent = 'Add expense';
+  el.saveExpenseBtn.textContent = 'Save expense';
   setCostType('one-time');
   setPeriodType('monthly');
-  els.formHeading.textContent = 'Log expense';
-  els.saveExpenseBtn.textContent = 'Save expense';
+}
+
+function beginEdit(id) {
+  const e = state.data.expenses.find((x) => x.id === id);
+  if (!e) return;
+  el.expenseId.value = e.id;
+  el.expenseTitle.value = e.title;
+  el.expenseAmount.value = e.amount;
+  el.expenseDate.value = e.date;
+  el.expenseCategory.value = e.categoryId;
+  el.expensePaymentMethod.value = e.paymentMethodId;
+  el.expenseNotes.value = e.notes || '';
+  setCostType(e.costType);
+  setPeriodType(e.periodType);
+  el.expenseRecurringFrequency.value = e.recurringFrequency || 'monthly';
+  el.formTitle.textContent = 'Edit expense';
+  el.saveExpenseBtn.textContent = 'Update expense';
+  switchTab('add');
+  closeSheet('entrySheet');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function setCostType(type) {
-  els.expenseCostType.value = type;
-  els.costSegments.forEach((button) => button.classList.toggle('active', button.dataset.costType === type));
-  els.recurringFields.classList.toggle('hidden-block', type !== 'recurring');
+  el.expenseCostType.value = type;
+  el.costSegments.forEach((btn) => btn.classList.toggle('active', btn.dataset.costType === type));
+  el.recurringRow.classList.toggle('hidden', type !== 'recurring');
 }
 
 function setPeriodType(type) {
-  els.expensePeriodType.value = type;
-  [...els.periodSegments, ...els.periodRecurringSegments].forEach((button) => {
-    button.classList.toggle('active', button.dataset.periodType === type);
-  });
+  el.expensePeriodType.value = type;
+  el.periodSegments.forEach((btn) => btn.classList.toggle('active', btn.dataset.periodType === type));
 }
 
-function onCategorySubmit(event) {
-  event.preventDefault();
-  const name = els.categoryName.value.trim();
-  const color = els.categoryColor.value;
-  if (!name) {
-    showToast('Give the category a name.');
-    return;
-  }
-  const duplicateName = state.data.categories.some((category) => category.name.toLowerCase() === name.toLowerCase() && category.id !== els.categoryId.value);
-  if (duplicateName) {
-    showToast('Category name already exists.');
-    return;
-  }
-
-  if (els.categoryId.value) {
-    const category = getCategoryById(els.categoryId.value);
-    if (category) {
-      category.name = name;
-      category.color = color;
-      showToast('Category updated.');
-    }
+function saveCategory(ev) {
+  ev.preventDefault();
+  const name = el.categoryName.value.trim();
+  const color = el.categoryColor.value;
+  if (!name) return toast('Category name is required.');
+  const dup = state.data.categories.some((c) => c.name.toLowerCase() === name.toLowerCase() && c.id !== el.categoryId.value);
+  if (dup) return toast('Category name already exists.');
+  if (el.categoryId.value) {
+    const c = getCategory(el.categoryId.value);
+    c.name = name; c.color = color;
+    toast('Category updated.');
   } else {
     state.data.categories.push({ id: uid('cat'), name, color, system: false, createdAt: new Date().toISOString() });
-    showToast('Category added.');
+    toast('Category added.');
   }
-
-  els.categoryForm.reset();
-  els.categoryColor.value = '#8b5cf6';
-  els.categoryId.value = '';
-  els.categorySheetTitle.textContent = 'Add category';
+  el.categoryForm.reset();
+  el.categoryId.value = '';
+  el.categoryColor.value = '#7c5cff';
+  el.categorySheetTitle.textContent = 'Add category';
   renderAll();
 }
 
-function fillCategoryForm(categoryId) {
-  const category = getCategoryById(categoryId);
-  if (!category) return;
-  els.categoryId.value = category.id;
-  els.categoryName.value = category.name;
-  els.categoryColor.value = category.color;
-  els.categorySheetTitle.textContent = 'Edit category';
+function loadCategory(id) {
+  const c = getCategory(id);
+  if (!c) return;
+  el.categoryId.value = c.id;
+  el.categoryName.value = c.name;
+  el.categoryColor.value = c.color;
+  el.categorySheetTitle.textContent = 'Edit category';
   openSheet('categorySheet');
 }
 
-function deleteCategory(categoryId) {
-  const usage = getCategoryUsageMap().get(categoryId) || 0;
-  if (usage > 0) {
-    showToast('Category is in use and cannot be deleted.');
-    return;
-  }
-  state.data.categories = state.data.categories.filter((category) => category.id !== categoryId);
-  if (!state.data.categories.length) {
-    state.data.categories = createInitialState().categories;
-  }
+function removeCategory(id) {
+  if ((usageMap().get(id) || 0) > 0) return toast('Delete or recategorize entries first.');
+  state.data.categories = state.data.categories.filter((c) => c.id !== id);
   renderAll();
-  showToast('Category deleted.');
+  toast('Category removed.');
 }
 
-function openEntrySheet(entryId) {
-  const entry = getExpenseById(entryId);
-  if (!entry) return;
-  const category = getCategoryById(entry.categoryId);
-  state.selectedEntryId = entryId;
-  els.entrySheetTitle.textContent = entry.title;
-  els.entrySheetBody.innerHTML = `
-    ${detailRow('Amount', formatCurrency(entry.amount))}
-    ${detailRow('Date', formatShortDate(entry.date))}
-    ${detailRow('Category', `<span class="meta-chip category-chip" style="background:${category.color}22;border:1px solid ${category.color}55;color:${category.color};">${escapeHtml(category.name)}</span>`)}
-    ${detailRow('Payment', escapeHtml(getPaymentMethodName(entry.paymentMethodId)))}
-    ${detailRow('Type', escapeHtml(entry.costType === 'recurring' ? `Recurring · ${entry.recurringFrequency}` : 'One-time'))}
-    ${detailRow('Period', escapeHtml(entry.periodType))}
-    ${detailRow('Added', escapeHtml(formatDateTime(entry.createdAt)))}
-    ${detailRow('Notes', entry.notes ? escapeHtml(entry.notes) : '<span class="muted">None</span>')}
-  `;
+function openEntrySheet(id) {
+  const e = state.data.expenses.find((x) => x.id === id);
+  if (!e) return;
+  const c = getCategory(e.categoryId);
+  state.entrySheetId = id;
+  el.entrySheetTitle.textContent = e.title;
+  el.entrySheetBody.innerHTML = [
+    detail('Amount', money(e.amount)),
+    detail('Date', shortDate(e.date)),
+    detail('Category', esc(c.name)),
+    detail('Payment method', esc(getPaymentName(e.paymentMethodId))),
+    detail('Cost type', esc(e.costType === 'recurring' ? `Recurring · ${e.recurringFrequency}` : 'One-time')),
+    detail('Period', esc(e.periodType)),
+    detail('Notes', e.notes ? esc(e.notes) : '—')
+  ].join('');
   openSheet('entrySheet');
 }
 
-function detailRow(label, value) {
-  return `<div class="detail-row"><span class="detail-label">${label}</span><span>${value}</span></div>`;
+function detail(label, value) { return `<div class="detail-row"><span class="detail-label">${label}</span><span>${value}</span></div>`; }
+function editFromSheet() { if (state.entrySheetId) beginEdit(state.entrySheetId); }
+function duplicateFromSheet() {
+  const source = state.data.expenses.find((x) => x.id === state.entrySheetId); if (!source) return;
+  state.data.expenses.unshift({ ...source, id: uid('exp'), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+  closeSheet('entrySheet'); renderAll(); toast('Entry duplicated.');
+}
+function deleteFromSheet() {
+  if (!state.entrySheetId) return;
+  state.data.expenses = state.data.expenses.filter((x) => x.id !== state.entrySheetId);
+  closeSheet('entrySheet'); renderAll(); toast('Entry deleted.');
 }
 
-function editSelectedEntry() {
-  if (!state.selectedEntryId) return;
-  closeSheet('entrySheet');
-  beginEditExpense(state.selectedEntryId);
-}
-
-function duplicateSelectedEntry() {
-  const entry = getExpenseById(state.selectedEntryId);
-  if (!entry) return;
-  const copy = { ...entry, id: uid('exp'), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-  state.data.expenses.unshift(copy);
-  closeSheet('entrySheet');
-  renderAll();
-  showToast('Entry duplicated.');
-}
-
-function deleteSelectedEntry() {
-  if (!state.selectedEntryId) return;
-  state.data.expenses = state.data.expenses.filter((expense) => expense.id !== state.selectedEntryId);
-  closeSheet('entrySheet');
-  renderAll();
-  showToast('Entry deleted.');
-}
-
-function getEntryFilters() {
+function entryFilters() {
   return {
-    search: els.searchInput.value.trim().toLowerCase(),
-    month: els.filterMonth.value,
-    startDate: els.filterDateStart.value,
-    endDate: els.filterDateEnd.value,
-    categoryId: els.filterCategory.value,
-    paymentMethodId: els.filterPaymentMethod.value,
-    costType: els.filterCostType.value,
-    recurringFrequency: els.filterFrequency.value,
-    periodType: els.filterPeriodType.value,
-    sort: els.filterSort.value,
+    search: el.searchInput.value.trim().toLowerCase(), month: el.filterMonth.value, sort: el.filterSort.value,
+    startDate: el.filterDateStart.value, endDate: el.filterDateEnd.value, categoryId: el.filterCategory.value,
+    paymentMethodId: el.filterPaymentMethod.value, costType: el.filterCostType.value, recurringFrequency: el.filterFrequency.value,
+    periodType: el.filterPeriodType.value
+  };
+}
+function chartFilters() {
+  return {
+    search: '', month: el.chartMonth.value, sort: 'date-asc', startDate: el.chartDateStart.value, endDate: el.chartDateEnd.value,
+    categoryId: el.chartCategory.value, paymentMethodId: el.chartPaymentMethod.value, costType: el.chartCostType.value,
+    recurringFrequency: el.chartFrequency.value, periodType: el.chartPeriodType.value, compareWindow: el.chartCompareWindow.value
   };
 }
 
-function getChartFilters() {
-  return {
-    search: '',
-    month: els.chartMonth.value,
-    startDate: els.chartDateStart.value,
-    endDate: els.chartDateEnd.value,
-    categoryId: els.chartCategory.value,
-    paymentMethodId: els.chartPaymentMethod.value,
-    costType: els.chartCostType.value,
-    recurringFrequency: els.chartFrequency.value,
-    periodType: els.chartPeriodType.value,
-    sort: 'date-asc',
-    compareWindow: els.chartCompareWindow.value,
-  };
-}
-
-function getFilteredEntries(filters) {
-  const list = state.data.expenses.filter((expense) => {
-    if (filters.search && !(expense.title.toLowerCase().includes(filters.search) || expense.notes.toLowerCase().includes(filters.search))) return false;
-    if (filters.month && filters.month !== 'all' && getMonthKey(expense.date) !== filters.month) return false;
-    if (filters.startDate && expense.date < filters.startDate) return false;
-    if (filters.endDate && expense.date > filters.endDate) return false;
-    if (filters.categoryId && filters.categoryId !== 'all' && expense.categoryId !== filters.categoryId) return false;
-    if (filters.paymentMethodId && filters.paymentMethodId !== 'all' && expense.paymentMethodId !== filters.paymentMethodId) return false;
-    if (filters.costType && filters.costType !== 'all' && expense.costType !== filters.costType) return false;
-    if (filters.recurringFrequency && filters.recurringFrequency !== 'all' && expense.recurringFrequency !== filters.recurringFrequency) return false;
-    if (filters.periodType && filters.periodType !== 'all' && expense.periodType !== filters.periodType) return false;
+function filteredEntries(filters) {
+  const rows = state.data.expenses.filter((e) => {
+    if (filters.search && !(e.title.toLowerCase().includes(filters.search) || e.notes.toLowerCase().includes(filters.search))) return false;
+    if (filters.month !== 'all' && monthKeyFromDate(e.date) !== filters.month) return false;
+    if (filters.startDate && e.date < filters.startDate) return false;
+    if (filters.endDate && e.date > filters.endDate) return false;
+    if (filters.categoryId !== 'all' && e.categoryId !== filters.categoryId) return false;
+    if (filters.paymentMethodId !== 'all' && e.paymentMethodId !== filters.paymentMethodId) return false;
+    if (filters.costType !== 'all' && e.costType !== filters.costType) return false;
+    if (filters.recurringFrequency !== 'all' && e.recurringFrequency !== filters.recurringFrequency) return false;
+    if (filters.periodType !== 'all' && e.periodType !== filters.periodType) return false;
     return true;
   });
-
-  return list.sort((a, b) => {
+  return rows.sort((a,b) => {
     switch (filters.sort) {
       case 'date-asc': return a.date.localeCompare(b.date);
       case 'amount-desc': return b.amount - a.amount;
       case 'amount-asc': return a.amount - b.amount;
       case 'created-desc': return new Date(b.createdAt) - new Date(a.createdAt);
-      case 'date-desc':
       default: return b.date.localeCompare(a.date) || new Date(b.createdAt) - new Date(a.createdAt);
     }
   });
 }
 
-function groupEntriesByMonth(entries) {
-  const groups = new Map();
-  entries.forEach((entry) => {
-    const key = getMonthKey(entry.date);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(entry);
-  });
-  return Array.from(groups.entries()).map(([monthKey, items]) => ({ monthKey, items }));
-}
-
-function resetEntriesFilters() {
-  els.searchInput.value = '';
-  els.filterMonth.value = getCurrentMonthKey();
-  els.filterDateStart.value = '';
-  els.filterDateEnd.value = '';
-  els.filterCategory.value = 'all';
-  els.filterPaymentMethod.value = 'all';
-  els.filterCostType.value = 'all';
-  els.filterFrequency.value = 'all';
-  els.filterPeriodType.value = 'all';
-  els.filterSort.value = 'date-desc';
-  els.filterGroup.value = 'month';
+function resetEntryFilters() {
+  el.searchInput.value = '';
+  el.filterMonth.value = currentMonthKey();
+  el.filterSort.value = 'date-desc';
+  el.filterDateStart.value = '';
+  el.filterDateEnd.value = '';
+  el.filterCategory.value = 'all';
+  el.filterPaymentMethod.value = 'all';
+  el.filterCostType.value = 'all';
+  el.filterFrequency.value = 'all';
+  el.filterPeriodType.value = 'all';
+  el.filterGroup.value = 'month';
   renderAll();
 }
-
 function resetChartFilters() {
-  els.chartCategory.value = 'all';
-  els.chartPaymentMethod.value = 'all';
-  els.chartCostType.value = 'all';
-  els.chartFrequency.value = 'all';
-  els.chartMonth.value = 'all';
-  els.chartDateStart.value = '';
-  els.chartDateEnd.value = '';
-  els.chartPeriodType.value = 'all';
-  els.chartCompareWindow.value = '3';
+  el.chartMonth.value = 'all';
+  el.chartCompareWindow.value = '3';
+  el.chartCategory.value = 'all';
+  el.chartPaymentMethod.value = 'all';
+  el.chartCostType.value = 'all';
+  el.chartFrequency.value = 'all';
+  el.chartDateStart.value = '';
+  el.chartDateEnd.value = '';
+  el.chartPeriodType.value = 'all';
   renderAll();
 }
 
-function renderLegend(container, items) {
-  if (!items.length) {
-    container.innerHTML = '<div class="empty-state">No data to display for this view.</div>';
-    return;
-  }
-  container.innerHTML = items.map((item) => `
-    <div class="legend-item">
-      <span class="legend-swatch" style="background:${item.color}"></span>
-      <div class="legend-meta">
-        <div class="legend-name">${escapeHtml(item.name)}</div>
-        <div class="legend-value">${formatCurrency(item.total)} · ${item.share}%</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderInsights(container, items) {
-  container.innerHTML = items.map((item) => `
-    <div class="insight-item">
-      <span class="insight-icon">${item.icon}</span>
-      <div>${escapeHtml(item.text)}</div>
-    </div>
-  `).join('');
-}
-
-function aggregateByCategory(entries) {
-  const total = sumAmounts(entries);
+function groupByMonth(rows) {
   const map = new Map();
-  entries.forEach((expense) => {
-    const category = getCategoryById(expense.categoryId);
-    if (!map.has(category.id)) {
-      map.set(category.id, { id: category.id, name: category.name, color: category.color, total: 0 });
-    }
-    map.get(category.id).total += expense.amount;
+  rows.forEach((e) => {
+    const key = monthKeyFromDate(e.date);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(e);
   });
-  return Array.from(map.values())
-    .sort((a, b) => b.total - a.total)
-    .map((item) => ({ ...item, share: total ? Math.round((item.total / total) * 100) : 0 }));
+  return [...map.entries()].map(([key, items]) => ({ key, items }));
 }
 
-function aggregateByPaymentMethod(entries) {
-  const total = sumAmounts(entries);
-  const palette = ['#7C5CFF', '#36C9C6', '#4BA3FF', '#F59E0B', '#FF8A65', '#2DD4BF', '#A78BFA'];
+function aggregateByCategory(rows) {
+  const total = sum(rows);
   const map = new Map();
-  entries.forEach((expense) => {
-    const name = getPaymentMethodName(expense.paymentMethodId);
-    if (!map.has(name)) {
-      map.set(name, { name, color: palette[map.size % palette.length], total: 0 });
-    }
-    map.get(name).total += expense.amount;
+  rows.forEach((e) => {
+    const c = getCategory(e.categoryId);
+    if (!map.has(c.id)) map.set(c.id, { id: c.id, name: c.name, color: c.color, total: 0 });
+    map.get(c.id).total += e.amount;
   });
-  return Array.from(map.values())
-    .sort((a, b) => b.total - a.total)
-    .map((item) => ({ ...item, share: total ? Math.round((item.total / total) * 100) : 0 }));
+  return [...map.values()].sort((a,b) => b.total - a.total).map((item) => ({ ...item, share: total ? Math.round(item.total / total * 100) : 0 }));
 }
 
-function buildMonthlySeries(entries, windowSize = 6) {
-  const end = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
-  const start = new Date(end.getFullYear(), end.getMonth() - (windowSize - 1), 1);
-  const buckets = [];
-  for (let i = 0; i < windowSize; i += 1) {
-    const date = new Date(start.getFullYear(), start.getMonth() + i, 1);
-    const key = getMonthKey(date);
-    const value = entries.filter((entry) => getMonthKey(entry.date) === key).reduce((sum, item) => sum + item.amount, 0);
-    buckets.push({ key, label: MONTH_KEY_FORMATTER.format(date), value: roundMoney(value) });
+function aggregateByPayment(rows) {
+  const colors = ['#7c5cff','#2ec5ff','#2fd1a2','#f59e0b','#ff8a65','#f472b6','#94a3b8'];
+  const total = sum(rows); const map = new Map();
+  rows.forEach((e) => {
+    const name = getPaymentName(e.paymentMethodId);
+    if (!map.has(name)) map.set(name, { name, color: colors[map.size % colors.length], total: 0 });
+    map.get(name).total += e.amount;
+  });
+  return [...map.values()].sort((a,b) => b.total - a.total).map((item) => ({ ...item, share: total ? Math.round(item.total / total * 100) : 0 }));
+}
+
+function buildMonthlyTrend(rows, count) {
+  const start = new Date(TODAY.getFullYear(), TODAY.getMonth() - (count - 1), 1);
+  const points = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth() + i, 1);
+    const key = monthKeyFromDate(d);
+    const value = round(rows.filter((e) => monthKeyFromDate(e.date) === key).reduce((s, e) => s + e.amount, 0));
+    points.push({ key, label: shortMonth(d), value });
   }
-  return buckets;
+  return points;
 }
 
-function buildRecurringVsOneTimeSeries(entries, windowSize = 6) {
-  const series = buildMonthlySeries(entries, windowSize);
-  return series.map((month) => {
-    const monthEntries = entries.filter((entry) => getMonthKey(entry.date) === month.key);
+function buildRecurringTrend(rows, count) {
+  const trend = buildMonthlyTrend(rows, count);
+  return trend.map((m) => {
+    const monthRows = rows.filter((e) => monthKeyFromDate(e.date) === m.key);
     return {
-      label: month.label,
-      recurring: roundMoney(monthEntries.filter((entry) => entry.costType === 'recurring').reduce((sum, item) => sum + item.amount, 0)),
-      oneTime: roundMoney(monthEntries.filter((entry) => entry.costType === 'one-time').reduce((sum, item) => sum + item.amount, 0)),
+      label: m.label,
+      recurring: round(monthRows.filter((e) => e.costType === 'recurring').reduce((s, e) => s + e.amount, 0)),
+      oneTime: round(monthRows.filter((e) => e.costType === 'one-time').reduce((s, e) => s + e.amount, 0)),
     };
   });
 }
 
-function drawDonutChart(canvas, items) {
-  const ctx = canvas.getContext('2d');
-  const { width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
-  if (!items.length) {
-    drawEmptyChart(canvas, 'No data');
-    return;
-  }
-  const total = items.reduce((sum, item) => sum + item.total, 0);
-  const centerX = width / 2;
-  const centerY = height / 2;
-  const radius = Math.min(width, height) * 0.32;
-  const innerRadius = radius * 0.62;
-  let startAngle = -Math.PI / 2;
+function homeInsights({ total, recurring, oneTime, biggest, avg, cats, trend }) {
+  const last = trend.at(-1)?.value || 0; const prev = trend.at(-2)?.value || 0;
+  return [
+    { icon: '◎', text: cats[0] ? `${cats[0].name} leads this month at ${money(cats[0].total)}.` : 'Start adding expenses to unlock insights.' },
+    { icon: '↕', text: prev ? `You are ${last >= prev ? 'up' : 'down'} ${money(Math.abs(last - prev))} versus last month.` : `Average spend is ${money(avg)} per entry.` },
+    { icon: '◆', text: biggest ? `Largest transaction is ${biggest.title} at ${money(biggest.amount)}.` : 'Largest transaction will appear here.' },
+    { icon: '◌', text: total ? `Recurring accounts for ${Math.round(recurring / Math.max(total, 1) * 100)}% of this month.` : 'No spending recorded this month yet.' },
+    { icon: '⋯', text: oneTime > recurring ? 'One-time purchases are driving spend right now.' : 'Recurring costs are the main driver right now.' },
+  ];
+}
 
+function chartInsights({ rows, cats, methods, trend, total }) {
+  const recurring = sum(rows.filter((e) => e.costType === 'recurring'));
+  const oneTime = total - recurring;
+  const peak = trend.slice().sort((a,b) => b.value - a.value)[0];
+  return [
+    { icon: '◔', text: cats[0] ? `${cats[0].name} is the largest category at ${money(cats[0].total)}.` : 'No category trend available for these filters.' },
+    { icon: '▣', text: methods[0] ? `${methods[0].name} is the top payment method by spend.` : 'No payment method data yet.' },
+    { icon: '↗', text: peak ? `Peak month in this window is ${peak.label} at ${money(peak.value)}.` : 'Add more entries to compare months.' },
+    { icon: '◫', text: total ? `Recurring is ${money(recurring)} and one-time is ${money(oneTime)} in this filtered view.` : 'Filtered charts will update as soon as data exists.' },
+  ];
+}
+
+function legendItem(item) {
+  return `<div class="legend-item"><span class="swatch" style="background:${item.color}"></span><div><div class="legend-name">${esc(item.name)}</div><div class="legend-meta">${money(item.total)} · ${item.share}%</div></div></div>`;
+}
+function insightItem(item) { return `<div class="insight"><strong style="margin-right:8px;">${item.icon}</strong>${esc(item.text)}</div>`; }
+
+function drawDonut(canvas, items) {
+  const ctx = prepCanvas(canvas); const w = canvas._cssW; const h = canvas._cssH; ctx.clearRect(0,0,w,h);
+  if (!items.length) return emptyChart(ctx,w,h,'No data');
+  const total = items.reduce((s,i) => s + i.total, 0); const cx = w/2, cy = h/2, r = Math.min(w,h)*0.33, inner = r*0.62;
+  let angle = -Math.PI/2;
   items.forEach((item) => {
-    const slice = (item.total / total) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.moveTo(centerX, centerY);
-    ctx.arc(centerX, centerY, radius, startAngle, startAngle + slice);
-    ctx.closePath();
-    ctx.fillStyle = item.color;
-    ctx.fill();
-    startAngle += slice;
+    const slice = item.total / total * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,angle,angle+slice); ctx.closePath(); ctx.fillStyle = item.color; ctx.fill(); angle += slice;
   });
-
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = 'source-over';
-
-  ctx.fillStyle = '#f5f7fb';
-  ctx.font = `${Math.round(width * 0.06)}px -apple-system, BlinkMacSystemFont, sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.fillText('Total', centerX, centerY - 10);
-  ctx.font = `700 ${Math.round(width * 0.075)}px -apple-system, BlinkMacSystemFont, sans-serif`;
-  ctx.fillText(formatCompactCurrency(total), centerX, centerY + 22);
+  ctx.beginPath(); ctx.arc(cx,cy,inner,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#f5f7fb'; ctx.textAlign='center'; ctx.font='12px -apple-system'; ctx.fillText('Total', cx, cy - 8); ctx.font='700 20px -apple-system'; ctx.fillText(compactMoney(total), cx, cy + 18);
 }
 
-function drawLineChart(canvas, series, options = {}) {
-  const ctx = canvas.getContext('2d');
-  const { width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
-  if (!series.length || series.every((item) => item.value === 0)) {
-    drawEmptyChart(canvas, 'No trend data');
-    return;
+function drawLine(canvas, points, area) {
+  const ctx = prepCanvas(canvas); const w = canvas._cssW; const h = canvas._cssH; ctx.clearRect(0,0,w,h);
+  if (!points.length || points.every((p) => p.value === 0)) return emptyChart(ctx,w,h,'No trend data');
+  const pad = { t: 18, r: 10, b: 28, l: 10 }; const cw = w - pad.l - pad.r; const ch = h - pad.t - pad.b; const max = Math.max(...points.map((p) => p.value), 1);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
+  for (let i=0;i<4;i++) { const y = pad.t + (ch/3) * i; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke(); }
+  const mapped = points.map((p,i) => ({ x: pad.l + (cw / Math.max(points.length - 1,1)) * i, y: pad.t + ch - (p.value / max) * ch, label: p.label }));
+  if (area) {
+    const grad = ctx.createLinearGradient(0,pad.t,0,h-pad.b); grad.addColorStop(0,'rgba(124,92,255,.28)'); grad.addColorStop(1,'rgba(46,197,255,.02)');
+    ctx.beginPath(); ctx.moveTo(mapped[0].x, h-pad.b); mapped.forEach((p) => ctx.lineTo(p.x,p.y)); ctx.lineTo(mapped.at(-1).x,h-pad.b); ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
   }
+  ctx.beginPath(); mapped.forEach((p,i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y)); ctx.strokeStyle = '#7c5cff'; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = '#2ec5ff'; mapped.forEach((p) => { ctx.beginPath(); ctx.arc(p.x,p.y,3.5,0,Math.PI*2); ctx.fill(); });
+  ctx.fillStyle = '#98a2b3'; ctx.font='11px -apple-system'; ctx.textAlign='center'; mapped.forEach((p) => ctx.fillText(p.label, p.x, h - 10));
+}
 
-  const padding = { top: 20, right: 18, bottom: 32, left: 18 };
-  const max = Math.max(...series.map((item) => item.value), 1);
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 4; i += 1) {
-    const y = padding.top + (chartHeight / 4) * i;
-    ctx.beginPath();
-    ctx.moveTo(padding.left, y);
-    ctx.lineTo(width - padding.right, y);
-    ctx.stroke();
-  }
-
-  const points = series.map((item, index) => ({
-    x: padding.left + (chartWidth / Math.max(series.length - 1, 1)) * index,
-    y: padding.top + chartHeight - (item.value / max) * chartHeight,
-    label: item.label,
-    value: item.value,
-  }));
-
-  if (options.showArea) {
-    const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-    gradient.addColorStop(0, 'rgba(124,92,255,0.34)');
-    gradient.addColorStop(1, 'rgba(54,201,198,0.02)');
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, height - padding.bottom);
-    points.forEach((point) => ctx.lineTo(point.x, point.y));
-    ctx.lineTo(points[points.length - 1].x, height - padding.bottom);
-    ctx.closePath();
-    ctx.fillStyle = gradient;
-    ctx.fill();
-  }
-
-  ctx.beginPath();
-  points.forEach((point, index) => {
-    if (index === 0) ctx.moveTo(point.x, point.y);
-    else ctx.lineTo(point.x, point.y);
-  });
-  ctx.strokeStyle = '#7C5CFF';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  ctx.fillStyle = '#36C9C6';
-  points.forEach((point) => {
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  ctx.fillStyle = '#8f9bae';
-  ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.textAlign = 'center';
-  points.forEach((point) => {
-    ctx.fillText(point.label, point.x, height - 10);
+function drawBar(canvas, items) {
+  const ctx = prepCanvas(canvas); const w = canvas._cssW; const h = canvas._cssH; ctx.clearRect(0,0,w,h);
+  if (!items.length) return emptyChart(ctx,w,h,'No category data');
+  const pad = { t: 16, r: 10, b: 34, l: 10 }; const cw = w - pad.l - pad.r; const ch = h - pad.t - pad.b; const max = Math.max(...items.map((i) => i.total), 1); const slot = cw / items.length; const bw = slot * 0.62;
+  items.forEach((item,i) => {
+    const x = pad.l + slot*i + (slot-bw)/2; const bh = item.total / max * ch; const y = pad.t + ch - bh;
+    roundedRect(ctx,x,y,bw,bh,10,item.color); ctx.fillStyle = '#98a2b3'; ctx.font='11px -apple-system'; ctx.textAlign='center'; ctx.fillText(trim(item.name,8), x+bw/2, h-10);
   });
 }
 
-function drawBarChart(canvas, items, options = {}) {
-  const ctx = canvas.getContext('2d');
-  const { width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
-  if (!items.length) {
-    drawEmptyChart(canvas, 'No breakdown data');
-    return;
-  }
-
-  if (options.horizontal) {
-    drawHorizontalBars(ctx, width, height, items);
-    return;
-  }
-
-  const padding = { top: 18, right: 12, bottom: 42, left: 12 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-  const max = Math.max(...items.map((item) => item.total), 1);
-  const barWidth = chartWidth / items.length * 0.68;
-
-  items.forEach((item, index) => {
-    const x = padding.left + (chartWidth / items.length) * index + (chartWidth / items.length - barWidth) / 2;
-    const barHeight = (item.total / max) * chartHeight;
-    const y = padding.top + chartHeight - barHeight;
-    const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-    gradient.addColorStop(0, item.color || '#7C5CFF');
-    gradient.addColorStop(1, 'rgba(255,255,255,0.15)');
-    roundRect(ctx, x, y, barWidth, barHeight, 12, true, false, gradient);
-
-    ctx.fillStyle = '#8f9bae';
-    ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(truncateLabel(item.name, 8), x + barWidth / 2, height - 14);
+function drawHorizontalBar(canvas, items) {
+  const ctx = prepCanvas(canvas); const w = canvas._cssW; const h = canvas._cssH; ctx.clearRect(0,0,w,h);
+  if (!items.length) return emptyChart(ctx,w,h,'No payment method data');
+  const pad = { t: 14, r: 12, b: 8, l: 98 }; const cw = w - pad.l - pad.r; const ch = h - pad.t - pad.b; const max = Math.max(...items.map((i) => i.total), 1); const row = ch / items.length;
+  items.forEach((item,i) => {
+    const y = pad.t + row*i + 6; const barH = Math.max(row - 12, 12); const barW = item.total / max * cw;
+    roundedRect(ctx,pad.l,y,barW,barH,10,item.color); ctx.fillStyle='#dce4f1'; ctx.font='12px -apple-system'; ctx.textAlign='left'; ctx.fillText(trim(item.name,13), 8, y + barH * 0.72); ctx.textAlign='right'; ctx.fillText(compactMoney(item.total), w - 4, y + barH * 0.72);
   });
 }
 
-function drawHorizontalBars(ctx, width, height, items) {
-  const padding = { top: 16, right: 18, bottom: 12, left: 92 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-  const max = Math.max(...items.map((item) => item.total), 1);
-  const rowHeight = chartHeight / items.length;
-
-  items.forEach((item, index) => {
-    const y = padding.top + rowHeight * index + 8;
-    const barHeight = Math.max(rowHeight - 14, 14);
-    const barWidth = (item.total / max) * chartWidth;
-    const gradient = ctx.createLinearGradient(padding.left, y, padding.left + barWidth, y);
-    gradient.addColorStop(0, '#7C5CFF');
-    gradient.addColorStop(1, '#36C9C6');
-    roundRect(ctx, padding.left, y, barWidth, barHeight, 10, true, false, gradient);
-
-    ctx.fillStyle = '#c5cfde';
-    ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(truncateLabel(item.name, 12), 12, y + barHeight * 0.72);
-    ctx.textAlign = 'right';
-    ctx.fillText(formatCompactCurrency(item.total), width - 8, y + barHeight * 0.72);
+function drawStack(canvas, items) {
+  const ctx = prepCanvas(canvas); const w = canvas._cssW; const h = canvas._cssH; ctx.clearRect(0,0,w,h);
+  if (!items.length || items.every((i) => i.recurring === 0 && i.oneTime === 0)) return emptyChart(ctx,w,h,'No comparison data');
+  const pad = { t: 16, r: 10, b: 34, l: 10 }; const cw = w - pad.l - pad.r; const ch = h - pad.t - pad.b; const max = Math.max(...items.map((i) => i.recurring + i.oneTime),1); const slot = cw / items.length; const bw = slot * 0.62;
+  items.forEach((item,i) => {
+    const x = pad.l + slot*i + (slot-bw)/2; const h1 = item.oneTime / max * ch; const h2 = item.recurring / max * ch; const base = pad.t + ch;
+    roundedRect(ctx,x,base-h1,bw,h1,10,'#2ec5ff'); roundedRect(ctx,x,base-h1-h2,bw,h2,10,'#7c5cff');
+    ctx.fillStyle='#98a2b3'; ctx.font='11px -apple-system'; ctx.textAlign='center'; ctx.fillText(item.label, x+bw/2, h-10);
   });
 }
 
-function drawStackedChart(canvas, series) {
-  const ctx = canvas.getContext('2d');
-  const { width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
-  if (!series.length || series.every((item) => item.recurring === 0 && item.oneTime === 0)) {
-    drawEmptyChart(canvas, 'No comparison data');
-    return;
-  }
-
-  const padding = { top: 18, right: 12, bottom: 38, left: 12 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-  const max = Math.max(...series.map((item) => item.recurring + item.oneTime), 1);
-  const barWidth = chartWidth / series.length * 0.64;
-
-  series.forEach((item, index) => {
-    const x = padding.left + (chartWidth / series.length) * index + (chartWidth / series.length - barWidth) / 2;
-    const recurringHeight = (item.recurring / max) * chartHeight;
-    const oneTimeHeight = (item.oneTime / max) * chartHeight;
-    const baseY = padding.top + chartHeight;
-    roundRect(ctx, x, baseY - oneTimeHeight, barWidth, oneTimeHeight, 10, true, false, '#36C9C6');
-    roundRect(ctx, x, baseY - oneTimeHeight - recurringHeight, barWidth, recurringHeight, 10, true, false, '#7C5CFF');
-
-    ctx.fillStyle = '#8f9bae';
-    ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(item.label, x + barWidth / 2, height - 12);
-  });
+function prepCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const parent = canvas.parentElement.getBoundingClientRect();
+  const cssW = Math.max(Math.floor(parent.width - 4), 120);
+  const cssH = canvas.parentElement.classList.contains('donut-card') ? 260 : (canvas.parentElement.classList.contains('tall') ? 220 : 200);
+  canvas.style.width = `${cssW}px`; canvas.style.height = `${cssH}px`;
+  canvas.width = Math.floor(cssW * dpr); canvas.height = Math.floor(cssH * dpr);
+  canvas._cssW = cssW; canvas._cssH = cssH;
+  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return ctx;
 }
 
-function drawEmptyChart(canvas, label) {
-  const ctx = canvas.getContext('2d');
-  const { width, height } = setupCanvas(canvas);
-  ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = 'rgba(255,255,255,0.05)';
-  roundRect(ctx, 12, 12, width - 24, height - 24, 18, true, false, 'rgba(255,255,255,0.04)');
-  ctx.fillStyle = '#8f9bae';
-  ctx.font = '14px -apple-system, BlinkMacSystemFont, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(label, width / 2, height / 2);
-}
+function roundedRect(ctx,x,y,w,h,r,color) { if (w <= 0 || h <= 0) return; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fillStyle = color; ctx.fill(); }
+function emptyChart(ctx,w,h,text) { ctx.fillStyle='rgba(255,255,255,.04)'; roundedRect(ctx,8,8,w-16,h-16,16,'rgba(255,255,255,.04)'); ctx.fillStyle='#98a2b3'; ctx.textAlign='center'; ctx.font='13px -apple-system'; ctx.fillText(text, w/2, h/2); }
 
-function setupCanvas(canvas) {
-  const ratio = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const width = Math.floor((rect.width || canvas.width) * ratio);
-  const height = Math.floor((rect.height || canvas.height) * ratio);
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-  }
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(ratio, ratio);
-  return { width: (rect.width || canvas.width / ratio), height: (rect.height || canvas.height / ratio) };
-}
-
-function roundRect(ctx, x, y, width, height, radius, fill, stroke, fillStyle) {
-  if (width <= 0 || height <= 0) return;
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.lineTo(x + width - radius, y);
-  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-  ctx.lineTo(x + width, y + height - radius);
-  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-  ctx.lineTo(x + radius, y + height);
-  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-  ctx.lineTo(x, y + radius);
-  ctx.quadraticCurveTo(x, y, x + radius, y);
-  ctx.closePath();
-  if (fill) {
-    ctx.fillStyle = fillStyle;
-    ctx.fill();
-  }
-  if (stroke) ctx.stroke();
-}
+function fillSelect(select, options) { select.innerHTML = options.map((o) => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join(''); }
+function preserveSelect(select, options, fallback) { const cur = select.value; fillSelect(select, options); select.value = options.some((o) => o.value === cur) ? cur : fallback; }
+function buildMonthOptions() { const start = new Date(TODAY.getFullYear() - 1, TODAY.getMonth(), 1); const out = []; for (let i=0;i<24;i++) { const d = new Date(start.getFullYear(), start.getMonth() + i, 1); out.push({ value: monthKeyFromDate(d), label: fmtMonth.format(d) }); } return out.reverse(); }
+function usageMap() { const map = new Map(state.data.categories.map((c) => [c.id, 0])); state.data.expenses.forEach((e) => map.set(e.categoryId, (map.get(e.categoryId) || 0) + 1)); return map; }
+function getCategory(id) { return state.data.categories.find((c) => c.id === id) || state.data.categories[0]; }
+function getPaymentName(id) { return state.data.paymentMethods.find((m) => m.id === id)?.name || 'Payment'; }
+function money(v) { return fmtCurrency.format(v || 0); }
+function compactMoney(v) { return v >= 1000 ? `$${(v/1000).toFixed(1)}k` : money(v); }
+function sum(rows) { return round(rows.reduce((s,e) => s + Number(e.amount || 0), 0)); }
+function round(n) { return Math.round(n * 100) / 100; }
+function monthKeyFromDate(input) { const d = typeof input === 'string' ? new Date(`${input}T00:00:00`) : input; return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function currentMonthKey() { return monthKeyFromDate(TODAY); }
+function parseMonthKey(key) { const [y,m] = key.split('-').map(Number); return new Date(y, m-1, 1); }
+function shortMonth(d) { return new Intl.DateTimeFormat('en-CA', { month: 'short' }).format(d); }
+function shortDate(d) { return fmtShortDate.format(new Date(`${d}T00:00:00`)); }
+function dateInput(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function compareWindow(v) { return v === 'year' ? 12 : Number(v || 3); }
+function uid(prefix) { return `${prefix}_${Math.random().toString(36).slice(2,9)}${Date.now().toString(36).slice(-4)}`; }
+function trim(s, n) { return s.length > n ? `${s.slice(0, n-1)}…` : s; }
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function esc(v) { return String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+function switchTab(tab) { state.activeTab = tab; el.tabs.forEach((x) => x.classList.toggle('active', x.dataset.tab === tab)); el.navBtns.forEach((x) => x.classList.toggle('active', x.dataset.tabTarget === tab)); el.headerTitle.textContent = cap(tab); if (tab === 'home') renderHome(); if (tab === 'charts') renderCharts(); }
+function openSheet(id) { document.getElementById(id).classList.remove('hidden'); }
+function closeSheet(id) { document.getElementById(id).classList.add('hidden'); if (id === 'entrySheet') state.entrySheetId = null; }
+function toast(msg) { el.toast.textContent = msg; el.toast.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => el.toast.classList.add('hidden'), 2200); }
 
 function exportBackup() {
   const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `north-ledger-backup-${toDateInputValue(TODAY)}.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  showToast('Backup exported.');
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `north-ledger-backup-${dateInput(TODAY)}.json`; a.click(); URL.revokeObjectURL(url); toast('Backup exported.');
 }
-
-function importBackup(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
+function importBackup(ev) {
+  const file = ev.target.files?.[0]; if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const parsed = JSON.parse(reader.result);
-      state.data = normalizeImportedState(parsed);
-      saveState();
-      renderAll();
-      showToast('Backup imported.');
-    } catch (error) {
-      console.error(error);
-      showToast('Backup file could not be imported.');
-    } finally {
-      els.importFileInput.value = '';
-    }
-  };
+  reader.onload = () => { try { state.data = normalizeState(JSON.parse(reader.result)); renderAll(); toast('Backup imported.'); } catch { toast('Import failed.'); } finally { el.importInput.value = ''; } };
   reader.readAsText(file);
 }
+function resetAllData() { if (!confirm('Reset all local budgeting data on this device?')) return; state.data = initState(); resetForm(); resetEntryFilters(); resetChartFilters(); renderAll(); toast('All data reset.'); }
 
-function resetAllData() {
-  const confirmed = window.confirm('Reset all local categories, preferences, and expenses on this device?');
-  if (!confirmed) return;
-  state.data = createInitialState();
-  saveState();
-  resetExpenseForm();
-  resetEntriesFilters();
-  resetChartFilters();
-  renderAll();
-  showToast('All local data reset.');
-}
-
-function updatePreferencesFromControls() {
-  state.data.preferences = {
-    reduceMotion: els.prefMotion.checked,
-    backupReminder: els.prefBackupReminder.checked,
-    accentGlow: els.prefAccentGlow.checked,
-  };
-  applyPreferences();
-  renderAll();
-  showToast('Preferences saved.');
-}
-
-function applyPreferences() {
-  document.body.classList.toggle('reduce-motion', state.data.preferences.reduceMotion);
-  document.body.classList.toggle('no-glow', !state.data.preferences.accentGlow);
-}
-
-function setActiveTab(tabName) {
-  state.activeTab = tabName;
-  els.tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === tabName));
-  els.navItems.forEach((item) => item.classList.toggle('active', item.dataset.tabTarget === tabName));
-  if (tabName === 'charts' || tabName === 'home') {
-    requestAnimationFrame(() => {
-      renderHome();
-      renderCharts();
-    });
-  }
-}
-
-function openSheet(sheetId) {
-  const sheet = els[sheetId];
-  if (!sheet) return;
-  sheet.classList.remove('hidden');
-  sheet.setAttribute('aria-hidden', 'false');
-}
-
-function closeSheet(sheetId) {
-  const sheet = els[sheetId];
-  if (!sheet) return;
-  sheet.classList.add('hidden');
-  sheet.setAttribute('aria-hidden', 'true');
-  if (sheetId === 'entrySheet') state.selectedEntryId = null;
-}
-
-function setupInstallPrompt() {
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    state.deferredInstallPrompt = event;
-    els.installBtn.classList.remove('hidden');
-  });
-  els.installBtn.addEventListener('click', async () => {
-    if (!state.deferredInstallPrompt) {
-      showToast('Use Add to Home Screen from your browser menu on iPhone.');
-      return;
-    }
-    state.deferredInstallPrompt.prompt();
-    await state.deferredInstallPrompt.userChoice;
-    state.deferredInstallPrompt = null;
-    els.installBtn.classList.add('hidden');
+function initInstall() {
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); state.deferredInstallPrompt = e; el.installBtn.classList.remove('hidden'); });
+  el.installBtn.addEventListener('click', async () => {
+    if (!state.deferredInstallPrompt) return toast('Use Add to Home Screen from your browser menu on iPhone.');
+    state.deferredInstallPrompt.prompt(); await state.deferredInstallPrompt.userChoice; state.deferredInstallPrompt = null; el.installBtn.classList.add('hidden');
   });
 }
-
-function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js').catch((error) => {
-      console.error('Service worker registration failed', error);
-    });
-  }
-}
-
-function getCategoryById(categoryId) {
-  return state.data.categories.find((category) => category.id === categoryId) || state.data.categories[0];
-}
-
-function getExpenseById(expenseId) {
-  return state.data.expenses.find((expense) => expense.id === expenseId);
-}
-
-function getPaymentMethodName(paymentMethodId) {
-  return state.data.paymentMethods.find((method) => method.id === paymentMethodId)?.name || 'Payment';
-}
-
-function getCategoryUsageMap() {
-  const map = new Map();
-  state.data.categories.forEach((category) => map.set(category.id, 0));
-  state.data.expenses.forEach((expense) => map.set(expense.categoryId, (map.get(expense.categoryId) || 0) + 1));
-  return map;
-}
-
-function sumAmounts(entries) {
-  return roundMoney(entries.reduce((sum, item) => sum + Number(item.amount || 0), 0));
-}
-
-function roundMoney(value) {
-  return Math.round(value * 100) / 100;
-}
-
-function formatCurrency(value) {
-  return CURRENCY_FORMATTER.format(value || 0);
-}
-
-function formatCompactCurrency(value) {
-  if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-  return formatCurrency(value);
-}
-
-function getMonthKey(dateInput) {
-  const date = typeof dateInput === 'string' ? new Date(`${dateInput}T00:00:00`) : dateInput;
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
-
-function parseMonthKey(monthKey) {
-  const [year, month] = monthKey.split('-').map(Number);
-  return new Date(year, month - 1, 1);
-}
-
-function getCurrentMonthKey() {
-  return getMonthKey(TODAY);
-}
-
-function toDateInputValue(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function formatShortDate(dateInput) {
-  return DATE_FORMATTER.format(new Date(`${dateInput}T00:00:00`));
-}
-
-function formatDateTime(dateInput) {
-  return new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-  }).format(new Date(dateInput));
-}
-
-function sortByCreatedDesc(a, b) {
-  return new Date(b.createdAt) - new Date(a.createdAt);
-}
-
-function resolveCompareWindow(value) {
-  if (value === 'year') return 12;
-  return Number(value || 3);
-}
-
-function truncateLabel(label, length) {
-  return label.length > length ? `${label.slice(0, length - 1)}…` : label;
-}
-
-function uid(prefix) {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
-}
-
-function randomColor() {
-  const palette = ['#5B8CFF', '#FF8A65', '#8B5CF6', '#2DD4BF', '#F59E0B', '#EC4899'];
-  return palette[Math.floor(Math.random() * palette.length)];
-}
-
-function showToast(message) {
-  els.toast.textContent = message;
-  els.toast.classList.remove('hidden');
-  clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(() => els.toast.classList.add('hidden'), 2200);
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
-window.addEventListener('resize', () => {
-  if (state.activeTab === 'home') renderHome();
-  if (state.activeTab === 'charts') renderCharts();
-});
+function registerSW() { if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js').catch(() => {}); }
