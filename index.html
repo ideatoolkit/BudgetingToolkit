@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Budget Flow" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Budget Flow</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --card: #ffffff;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --line: #334155;
+      --accent: #38bdf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --shadow: 0 12px 30px rgba(0,0,0,.22);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1220 0%, #111827 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .app {
+      width: 100%;
+      max-width: 460px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 16px 14px 92px;
+      position: relative;
+    }
+    .hero {
+      background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%);
+      border-radius: 24px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+    .hero small { opacity: .9; display:block; margin-bottom:8px; }
+    .hero h1 { margin: 0 0 6px; font-size: 1.6rem; }
+    .hero p { margin: 0; opacity: .95; font-size: .95rem; }
+    .tabs { display: none; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .card {
+      background: rgba(255,255,255,.04);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .section-title {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+    .section-title h2 { font-size: 1rem; margin: 0; }
+    .chip {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      font-size: .78rem;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .metric .label { color: var(--muted); font-size: .78rem; margin-bottom: 8px; }
+    .metric .value { font-size: 1.28rem; font-weight: 700; }
+    .metric .sub { color: var(--muted); font-size: .76rem; margin-top: 4px; }
+    .row { display:flex; gap:10px; }
+    .row > * { flex:1; }
+    label { display:block; font-size:.8rem; color: var(--muted); margin: 0 0 6px; }
+    input, select, button, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #0b1220;
+      color: var(--text);
+      padding: 12px 12px;
+      font-size: .98rem;
+      outline: none;
+    }
+    textarea { min-height: 86px; resize: vertical; }
+    button {
+      background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%);
+      border: none;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.1);
+      font-weight: 600;
+    }
+    button.danger { background: linear-gradient(135deg, #ef4444 0%, #f97316 100%); }
+    .segmented {
+      display:flex;
+      background: rgba(255,255,255,.05);
+      border-radius: 14px;
+      padding: 4px;
+      gap: 4px;
+    }
+    .segmented button {
+      background: transparent;
+      border: 0;
+      padding: 10px 8px;
+      border-radius: 12px;
+      font-size: .86rem;
+      color: var(--text);
+    }
+    .segmented button.active { background: rgba(255,255,255,.11); }
+    .barlist { display:flex; flex-direction:column; gap:10px; }
+    .barrow { display:grid; grid-template-columns: 92px 1fr auto; gap: 10px; align-items:center; font-size:.84rem; }
+    .bar {
+      height: 10px; border-radius: 999px; background: rgba(255,255,255,.07); overflow:hidden;
+    }
+    .bar > span { display:block; height:100%; border-radius:999px; }
+    .transactions { display:flex; flex-direction:column; gap:10px; }
+    .tx {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .tx-top { display:flex; justify-content:space-between; gap:10px; align-items:start; }
+    .tx-title { font-weight:700; }
+    .tx-meta { color: var(--muted); font-size: .78rem; margin-top: 6px; line-height: 1.45; }
+    .amount { font-weight:800; white-space: nowrap; }
+    .pillrow { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .pill { font-size:.73rem; padding:6px 8px; border-radius: 999px; background: rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.08); }
+    .home { background: rgba(34,197,94,.17); }
+    .pleasure { background: rgba(236,72,153,.17); }
+    .subscriptions { background: rgba(59,130,246,.17); }
+    .online { background: rgba(245,158,11,.17); }
+    .fixednav {
+      position: fixed;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(440px, calc(100vw - 20px));
+      background: rgba(17,24,39,.88);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 22px;
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+      display:grid;
+      grid-template-columns: repeat(4,1fr);
+      gap: 6px;
+      padding: 8px;
+      z-index: 20;
+    }
+    .navbtn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 9px 4px;
+      border-radius: 16px;
+      font-size: .75rem;
+    }
+    .navbtn.active { background: rgba(255,255,255,.08); color: white; }
+    .fab {
+      position: fixed;
+      right: max(18px, calc((100vw - 440px)/2 + 14px));
+      bottom: 92px;
+      width: 58px;
+      height: 58px;
+      border-radius: 999px;
+      font-size: 1.5rem;
+      box-shadow: var(--shadow);
+      z-index: 19;
+    }
+    .hint { color: var(--muted); font-size: .78rem; }
+    .mini { font-size: .76rem; color: var(--muted); }
+    .divider { height:1px; background: rgba(255,255,255,.08); margin: 10px 0; }
+    .hidden { display:none !important; }
+    @media (max-width: 370px) {
+      .grid2 { grid-template-columns: 1fr; }
+      .barrow { grid-template-columns: 78px 1fr auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="hero">
+      <small>iPhone-ready web app</small>
+      <h1>Budget Flow</h1>
+      <p>Track monthly expenses, spot recurring costs, and compare where your money goes.</p>
+    </div>
+
+    <section id="screen-dashboard" class="screen active">
+      <div class="card">
+        <div class="section-title">
+          <h2>Focus month</h2>
+          <span class="chip" id="focusMonthLabel"></span>
+        </div>
+        <div class="row">
+          <div>
+            <label for="focusMonth">Month</label>
+            <input id="focusMonth" type="month" />
+          </div>
+          <div>
+            <label for="rangeSelect">Compare</label>
+            <select id="rangeSelect">
+              <option value="1">1 month</option>
+              <option value="2">2 months</option>
+              <option value="3">3 months</option>
+              <option value="5">5 months</option>
+              <option value="12">12 months</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="metric"><div class="label">Total spend</div><div class="value" id="mTotal">$0</div><div class="sub" id="mTotalSub">for selected period</div></div>
+        <div class="metric"><div class="label">Recurring</div><div class="value" id="mRecurring">$0</div><div class="sub" id="mRecurringSub">0 items</div></div>
+        <div class="metric"><div class="label">One-time</div><div class="value" id="mOneTime">$0</div><div class="sub" id="mOneTimeSub">0 items</div></div>
+        <div class="metric"><div class="label">Average / month</div><div class="value" id="mAverage">$0</div><div class="sub" id="mAverageSub">across selected months</div></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><h2>Category breakdown</h2><span class="chip" id="topCategory"></span></div>
+        <div class="barlist" id="categoryBars"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><h2>Recurring vs one-time</h2><span class="chip" id="largestExpense"></span></div>
+        <div class="barlist" id="typeBars"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><h2>Monthly trend</h2><span class="chip" id="trendWindowLabel"></span></div>
+        <div class="barlist" id="trendBars"></div>
+      </div>
+    </section>
+
+    <section id="screen-add" class="screen">
+      <div class="card">
+        <div class="section-title"><h2>Quick add expense</h2><span class="chip">Fast entry</span></div>
+        <form id="expenseForm">
+          <div class="row">
+            <div>
+              <label>Date</label>
+              <input id="date" type="date" required />
+            </div>
+            <div>
+              <label>Amount</label>
+              <input id="amount" type="number" min="0" step="0.01" placeholder="0.00" required />
+            </div>
+          </div>
+          <div>
+            <label>Title</label>
+            <input id="title" type="text" placeholder="Netflix, Groceries, Trip deposit..." required />
+          </div>
+          <div class="row">
+            <div>
+              <label>Category</label>
+              <select id="category">
+                <option>Home & Living</option>
+                <option>Pleasure</option>
+                <option>Subscriptions</option>
+                <option>Online Purchases</option>
+              </select>
+            </div>
+            <div>
+              <label>Payment method</label>
+              <select id="paymentMethod">
+                <option>Credit Card</option>
+                <option>Debit</option>
+                <option>Cash</option>
+                <option>Bank Transfer</option>
+                <option>PayPal</option>
+                <option>Apple Pay</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Cost type</label>
+            <div class="segmented" id="costTypeToggle">
+              <button type="button" class="active" data-value="One-Time">One-Time</button>
+              <button type="button" data-value="Recurring">Recurring</button>
+            </div>
+          </div>
+          <div id="recurrenceWrap" class="hidden" style="margin-top:10px;">
+            <label>Recurring frequency</label>
+            <select id="frequency">
+              <option value="Monthly">Monthly</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <details style="margin-top:10px;">
+            <summary class="hint">Add note</summary>
+            <div style="margin-top:8px;"><textarea id="notes" placeholder="Optional details..."></textarea></div>
+          </details>
+          <div style="margin-top:12px;"><button type="submit">Save expense</button></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="section-title"><h2>Smart tips</h2><span class="chip">App style</span></div>
+        <div class="mini">Use short titles so your list stays clean. Add a note only when you need context. Keep recurring bills tagged correctly so monthly comparisons stay accurate.</div>
+      </div>
+    </section>
+
+    <section id="screen-list" class="screen">
+      <div class="card">
+        <div class="section-title"><h2>Filters</h2><span class="chip" id="entryCount"></span></div>
+        <div class="row">
+          <div>
+            <label>Month</label>
+            <input id="filterMonth" type="month" />
+          </div>
+          <div>
+            <label>Category</label>
+            <select id="filterCategory">
+              <option value="All">All</option>
+              <option>Home & Living</option>
+              <option>Pleasure</option>
+              <option>Subscriptions</option>
+              <option>Online Purchases</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>Cost type</label>
+            <select id="filterType">
+              <option value="All">All</option>
+              <option>Recurring</option>
+              <option>One-Time</option>
+            </select>
+          </div>
+          <div>
+            <label>Search title</label>
+            <input id="filterSearch" type="text" placeholder="Search..." />
+          </div>
+        </div>
+      </div>
+      <div class="transactions" id="transactionList"></div>
+    </section>
+
+    <section id="screen-settings" class="screen">
+      <div class="card">
+        <div class="section-title"><h2>Install on iPhone</h2><span class="chip">Home Screen</span></div>
+        <div class="mini" style="margin-bottom:10px;">Open this app from a normal web link in Safari, tap Share, then Add to Home Screen. Your data stays saved on your iPhone in Safari for that installed app.</div>
+      </div>
+      <div class="card">
+        <div class="section-title"><h2>Data</h2><span class="chip">Safe export</span></div>
+        <div class="mini" style="margin-bottom:10px;">Your data is saved in this browser using local storage. You can also link one JSON backup file for auto-overwrite on each change in supported browsers.</div>
+        <div class="row">
+          <button class="secondary" id="enableAutoSave">Link backup file</button>
+          <button class="secondary" id="saveNow">Save now</button>
+        </div>
+        <div class="mini" id="autoSaveStatus" style="margin-top:10px;">Auto-save file: Not linked. On iPhone, use browser save plus Export JSON backups.</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="secondary" id="exportJson">Export JSON</button>
+          <button class="secondary" id="exportCsv">Export CSV</button>
+        </div>
+        <div style="margin-top:10px;">
+          <label>Import JSON backup</label>
+          <input id="importJson" type="file" accept="application/json" />
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title"><h2>Reset</h2><span class="chip">Use carefully</span></div>
+        <button class="danger" id="clearAll">Delete all expenses</button>
+      </div>
+    </section>
+  </div>
+
+  <button class="fab" id="fabAdd">+</button>
+  <nav class="fixednav">
+    <button class="navbtn active" data-screen="dashboard">Home</button>
+    <button class="navbtn" data-screen="add">Add</button>
+    <button class="navbtn" data-screen="list">Entries</button>
+    <button class="navbtn" data-screen="settings">Settings</button>
+  </nav>
+
+  <script>
+    const STORAGE_KEY = 'budget-flow-v1';
+    const fmt = new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' });
+    const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const today = new Date();
+    const currentMonth = today.toISOString().slice(0,7);
+    const categoryColors = {
+      'Home & Living': '#22c55e',
+      'Pleasure': '#ec4899',
+      'Subscriptions': '#3b82f6',
+      'Online Purchases': '#f59e0b'
+    };
+
+    const DB_NAME = 'budget-flow-file-handles';
+    const STORE_NAME = 'handles';
+    const HANDLE_KEY = 'autosave-json';
+    let autoSaveHandle = null;
+
+
+    function seedData() {
+      return [
+        { id: crypto.randomUUID(), date: currentMonth + '-01', title: 'Rent', category: 'Home & Living', amount: 1450, type: 'Recurring', frequency: 'Monthly', paymentMethod: 'Bank Transfer', notes: '' },
+        { id: crypto.randomUUID(), date: currentMonth + '-03', title: 'Groceries', category: 'Home & Living', amount: 128.46, type: 'One-Time', frequency: '', paymentMethod: 'Debit', notes: '' },
+        { id: crypto.randomUUID(), date: currentMonth + '-05', title: 'Netflix', category: 'Subscriptions', amount: 18.99, type: 'Recurring', frequency: 'Monthly', paymentMethod: 'Credit Card', notes: '' },
+        { id: crypto.randomUUID(), date: currentMonth + '-07', title: 'Dinner Out', category: 'Pleasure', amount: 54.80, type: 'One-Time', frequency: '', paymentMethod: 'Credit Card', notes: '' },
+        { id: crypto.randomUUID(), date: currentMonth + '-10', title: 'Amazon Order', category: 'Online Purchases', amount: 72.15, type: 'One-Time', frequency: '', paymentMethod: 'Credit Card', notes: '' },
+        { id: crypto.randomUUID(), date: currentMonth + '-12', title: 'Gym', category: 'Subscriptions', amount: 36.00, type: 'Recurring', frequency: 'Monthly', paymentMethod: 'Credit Card', notes: '' },
+        { id: crypto.randomUUID(), date: currentMonth + '-15', title: 'Movie Night', category: 'Pleasure', amount: 24.00, type: 'One-Time', frequency: '', paymentMethod: 'Debit', notes: '' },
+        { id: crypto.randomUUID(), date: currentMonth + '-16', title: 'Phone Bill', category: 'Home & Living', amount: 85.00, type: 'Recurring', frequency: 'Monthly', paymentMethod: 'Credit Card', notes: '' }
+      ];
+    }
+
+    function loadExpenses() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        const initial = seedData();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+        return initial;
+      }
+      try { return JSON.parse(raw); } catch { return seedData(); }
+    }
+    let expenses = loadExpenses();
+
+    async function saveExpenses() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
+      await autoWriteBackup();
+      renderAll();
+    }
+
+    function monthLabel(monthStr) {
+      const [y, m] = monthStr.split('-').map(Number);
+      return `${MONTH_NAMES[m-1]} ${y}`;
+    }
+
+    function getMonthRange(endMonth, count) {
+      const out = [];
+      const [y, m] = endMonth.split('-').map(Number);
+      const base = new Date(y, m - 1, 1);
+      for (let i = count - 1; i >= 0; i--) {
+        const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+        out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+      }
+      return out;
+    }
+
+    function screen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(`screen-${name}`).classList.add('active');
+      document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.screen === name));
+      document.getElementById('fabAdd').style.display = name === 'add' ? 'none' : 'block';
+    }
+
+    document.querySelectorAll('.navbtn').forEach(btn => btn.addEventListener('click', () => screen(btn.dataset.screen)));
+    document.getElementById('fabAdd').addEventListener('click', () => screen('add'));
+
+    let activeType = 'One-Time';
+    document.querySelectorAll('#costTypeToggle button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#costTypeToggle button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeType = btn.dataset.value;
+        document.getElementById('recurrenceWrap').classList.toggle('hidden', activeType !== 'Recurring');
+      });
+    });
+
+    document.getElementById('date').value = today.toISOString().slice(0,10);
+    document.getElementById('focusMonth').value = currentMonth;
+    document.getElementById('filterMonth').value = currentMonth;
+
+    document.getElementById('expenseForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const item = {
+        id: crypto.randomUUID(),
+        date: document.getElementById('date').value,
+        title: document.getElementById('title').value.trim(),
+        category: document.getElementById('category').value,
+        amount: parseFloat(document.getElementById('amount').value || '0'),
+        type: activeType,
+        frequency: activeType === 'Recurring' ? document.getElementById('frequency').value : '',
+        paymentMethod: document.getElementById('paymentMethod').value,
+        notes: document.getElementById('notes').value.trim()
+      };
+      expenses.unshift(item);
+      document.getElementById('expenseForm').reset();
+      document.getElementById('date').value = today.toISOString().slice(0,10);
+      activeType = 'One-Time';
+      document.querySelectorAll('#costTypeToggle button').forEach((b, i) => b.classList.toggle('active', i === 0));
+      document.getElementById('recurrenceWrap').classList.add('hidden');
+      saveExpenses();
+      screen('dashboard');
+    });
+
+    function filteredExpenses() {
+      const month = document.getElementById('filterMonth').value;
+      const cat = document.getElementById('filterCategory').value;
+      const type = document.getElementById('filterType').value;
+      const search = document.getElementById('filterSearch').value.trim().toLowerCase();
+      return [...expenses].filter(e => {
+        if (month && !e.date.startsWith(month)) return false;
+        if (cat !== 'All' && e.category !== cat) return false;
+        if (type !== 'All' && e.type !== type) return false;
+        if (search && !e.title.toLowerCase().includes(search)) return false;
+        return true;
+      }).sort((a,b) => b.date.localeCompare(a.date));
+    }
+
+    ['filterMonth','filterCategory','filterType','filterSearch','focusMonth','rangeSelect'].forEach(id => {
+      document.getElementById(id).addEventListener('input', renderAll);
+      document.getElementById(id).addEventListener('change', renderAll);
+    });
+
+    function setBars(containerId, rows) {
+      const el = document.getElementById(containerId);
+      if (!rows.length) { el.innerHTML = '<div class="mini">No data yet.</div>'; return; }
+      const max = Math.max(...rows.map(r => r.value), 1);
+      el.innerHTML = rows.map(r => `
+        <div class="barrow">
+          <div>${r.label}</div>
+          <div class="bar"><span style="width:${(r.value/max)*100}%; background:${r.color};"></span></div>
+          <div>${fmt.format(r.value)}</div>
+        </div>`).join('');
+    }
+
+    function renderDashboard() {
+      const focusMonth = document.getElementById('focusMonth').value || currentMonth;
+      const range = parseInt(document.getElementById('rangeSelect').value, 10);
+      const months = getMonthRange(focusMonth, range);
+      const set = new Set(months);
+      const data = expenses.filter(e => set.has(e.date.slice(0,7)));
+      const total = data.reduce((s,e) => s + e.amount, 0);
+      const recurring = data.filter(e => e.type === 'Recurring');
+      const oneTime = data.filter(e => e.type === 'One-Time');
+      const recurringTotal = recurring.reduce((s,e) => s + e.amount, 0);
+      const oneTimeTotal = oneTime.reduce((s,e) => s + e.amount, 0);
+      const average = total / range;
+      const byCat = ['Home & Living','Pleasure','Subscriptions','Online Purchases'].map(cat => ({
+        label: cat.replace(' & ', ' '),
+        value: data.filter(e => e.category === cat).reduce((s,e) => s + e.amount, 0),
+        color: categoryColors[cat]
+      }));
+      const topCat = [...byCat].sort((a,b) => b.value - a.value)[0];
+      const largest = [...data].sort((a,b) => b.amount - a.amount)[0];
+      const trendRows = months.map(m => ({
+        label: monthLabel(m),
+        value: expenses.filter(e => e.date.startsWith(m)).reduce((s,e) => s + e.amount, 0),
+        color: '#38bdf8'
+      }));
+
+      document.getElementById('focusMonthLabel').textContent = monthLabel(focusMonth);
+      document.getElementById('trendWindowLabel').textContent = `${range} month view`;
+      document.getElementById('mTotal').textContent = fmt.format(total);
+      document.getElementById('mRecurring').textContent = fmt.format(recurringTotal);
+      document.getElementById('mOneTime').textContent = fmt.format(oneTimeTotal);
+      document.getElementById('mAverage').textContent = fmt.format(average);
+      document.getElementById('mRecurringSub').textContent = `${recurring.length} items`;
+      document.getElementById('mOneTimeSub').textContent = `${oneTime.length} items`;
+      document.getElementById('mTotalSub').textContent = `for ${range === 1 ? 'selected month' : `${range} months`}`;
+      document.getElementById('topCategory').textContent = topCat && topCat.value > 0 ? `Top: ${topCat.label}` : 'No spend';
+      document.getElementById('largestExpense').textContent = largest ? `Largest: ${largest.title}` : 'No expenses';
+
+      setBars('categoryBars', byCat);
+      setBars('typeBars', [
+        { label: 'Recurring', value: recurringTotal, color: '#8b5cf6' },
+        { label: 'One-Time', value: oneTimeTotal, color: '#f59e0b' }
+      ]);
+      setBars('trendBars', trendRows);
+    }
+
+    function categoryClass(cat) {
+      if (cat === 'Home & Living') return 'home';
+      if (cat === 'Pleasure') return 'pleasure';
+      if (cat === 'Subscriptions') return 'subscriptions';
+      return 'online';
+    }
+
+    function renderList() {
+      const data = filteredExpenses();
+      document.getElementById('entryCount').textContent = `${data.length} items`;
+      const el = document.getElementById('transactionList');
+      if (!data.length) { el.innerHTML = '<div class="card mini">No matching entries.</div>'; return; }
+      el.innerHTML = data.map(e => `
+        <div class="tx">
+          <div class="tx-top">
+            <div>
+              <div class="tx-title">${escapeHtml(e.title)}</div>
+              <div class="tx-meta">${escapeHtml(e.date)} · ${escapeHtml(e.paymentMethod)}</div>
+            </div>
+            <div class="amount">${fmt.format(e.amount)}</div>
+          </div>
+          <div class="pillrow">
+            <span class="pill ${categoryClass(e.category)}">${escapeHtml(e.category)}</span>
+            <span class="pill">${escapeHtml(e.type)}${e.frequency ? ' · ' + escapeHtml(e.frequency) : ''}</span>
+          </div>
+          ${e.notes ? `<div class="tx-meta" style="margin-top:8px;">${escapeHtml(e.notes)}</div>` : ''}
+          <div style="margin-top:10px;"><button class="secondary" onclick="deleteExpense('${e.id}')">Delete</button></div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    }
+
+    window.deleteExpense = function(id) {
+      expenses = expenses.filter(e => e.id !== id);
+      saveExpenses();
+    }
+
+    function downloadFile(name, content, type) {
+      const blob = new Blob([content], { type });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    document.getElementById('exportJson').addEventListener('click', () => {
+      downloadFile('budget-flow-backup.json', JSON.stringify(expenses, null, 2), 'application/json');
+    });
+
+    document.getElementById('exportCsv').addEventListener('click', () => {
+      const header = ['date','title','category','amount','type','frequency','paymentMethod','notes'];
+      const rows = expenses.map(e => header.map(k => `"${String(e[k] ?? '').replaceAll('"', '""')}"`).join(','));
+      downloadFile('budget-flow-export.csv', [header.join(','), ...rows].join('\n'), 'text/csv');
+    });
+
+    document.getElementById('importJson').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (!Array.isArray(parsed)) throw new Error('Invalid file');
+        expenses = parsed;
+        saveExpenses();
+        alert('Import successful.');
+      } catch {
+        alert('Import failed. Please use a valid backup JSON file.');
+      }
+    });
+
+    document.getElementById('clearAll').addEventListener('click', () => {
+      if (!confirm('Delete all saved expenses from this browser?')) return;
+      expenses = [];
+      saveExpenses();
+    });
+
+    async function openHandleDb() {
+      return await new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          req.result.createObjectStore(STORE_NAME);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function setStoredHandle(handle) {
+      const db = await openHandleDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(handle, HANDLE_KEY);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    }
+
+    async function getStoredHandle() {
+      const db = await openHandleDb();
+      const value = await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).get(HANDLE_KEY);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+      db.close();
+      return value;
+    }
+
+    function updateAutoSaveStatus(message) {
+      const el = document.getElementById('autoSaveStatus');
+      if (el) el.textContent = message;
+    }
+
+    async function autoWriteBackup(forcePicker = false) {
+      try {
+        if (!window.showSaveFilePicker) {
+          updateAutoSaveStatus('Auto-save file: Unsupported in this browser');
+          return false;
+        }
+        if (!autoSaveHandle && !forcePicker) return false;
+        if (!autoSaveHandle && forcePicker) {
+          autoSaveHandle = await window.showSaveFilePicker({
+            suggestedName: 'budget-flow-autosave.json',
+            types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+          });
+          await setStoredHandle(autoSaveHandle);
+        }
+        if (!autoSaveHandle) return false;
+        const permission = await autoSaveHandle.queryPermission({ mode: 'readwrite' });
+        let granted = permission;
+        if (granted !== 'granted') {
+          granted = await autoSaveHandle.requestPermission({ mode: 'readwrite' });
+        }
+        if (granted !== 'granted') {
+          updateAutoSaveStatus('Auto-save file: Permission not granted');
+          return false;
+        }
+        const writable = await autoSaveHandle.createWritable();
+        await writable.write(JSON.stringify(expenses, null, 2));
+        await writable.close();
+        updateAutoSaveStatus(`Auto-save file: Linked and synced (${new Date().toLocaleString()})`);
+        return true;
+      } catch (err) {
+        updateAutoSaveStatus('Auto-save file: Could not write backup');
+        return false;
+      }
+    }
+
+    async function initAutoSave() {
+      if (!window.showSaveFilePicker) {
+        updateAutoSaveStatus('Auto-save file: Unsupported in this browser');
+        return;
+      }
+      try {
+        autoSaveHandle = await getStoredHandle();
+        if (autoSaveHandle) {
+          updateAutoSaveStatus('Auto-save file: Linked, waiting to sync');
+          await autoWriteBackup();
+        } else {
+          updateAutoSaveStatus('Auto-save file: Not linked. On iPhone, use browser save plus Export JSON backups.');
+        }
+      } catch {
+        updateAutoSaveStatus('Auto-save file: Not linked. On iPhone, use browser save plus Export JSON backups.');
+      }
+    }
+
+    document.getElementById('enableAutoSave').addEventListener('click', async () => {
+      const ok = await autoWriteBackup(true);
+      if (!ok) alert('Could not link the backup file in this browser. Try Chrome or Edge and choose a JSON file location.');
+    });
+
+    document.getElementById('saveNow').addEventListener('click', async () => {
+      const ok = await autoWriteBackup(!!window.showSaveFilePicker && !autoSaveHandle);
+      if (ok) alert('Backup file saved.');
+      else alert('Could not save the backup file here. Your data is still stored locally in this browser.');
+    });
+
+    function renderAll() {
+      renderDashboard();
+      renderList();
+    }
+
+    renderAll();
+    initAutoSave();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
