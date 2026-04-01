@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'budget-flow-premium-v5';
+const STORAGE_KEY = 'budget-flow-premium-v6';
 const $ = id => document.getElementById(id);
 const defaultCategories = [
   {name:'Home & Living', color:'#31d98c'},
@@ -80,23 +80,24 @@ function upgradeData(){
 function injectStyles(){
   const style = document.createElement('style');
   style.textContent = `
-    .chart-large{height:360px!important}
-    .donut-flex{grid-template-columns:1fr!important;gap:16px!important}
-    .donut-box.small{height:320px!important}
-    #chartVisualCard .legend{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    #chartVisualCard .legend-row{padding:12px;border:1px solid rgba(255,255,255,.06);border-radius:16px;background:rgba(255,255,255,.03)}
+    .chart-large{height:300px!important}
+    .donut-flex{grid-template-columns:1fr!important;gap:14px!important}
+    .donut-box.small{height:220px!important;max-width:220px!important}
+    .donut-box{height:220px!important}
+    #chartVisualCard .legend{display:grid;grid-template-columns:1fr;gap:8px;max-height:320px;overflow:auto;padding-right:2px}
+    #chartVisualCard .legend-row{padding:10px 12px;border:1px solid rgba(255,255,255,.06);border-radius:14px;background:rgba(255,255,255,.03)}
     .compact-group{margin-bottom:14px}
     .compact-group .group-title{margin-bottom:8px}
     .compact-list{display:grid;gap:8px}
     .compact-entry{position:relative;padding:11px 12px 11px 16px;border-radius:18px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.08);overflow:hidden}
     .compact-entry:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--row-color,#6d5efc)}
-    .compact-head{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
-    .compact-title{font-size:1rem;font-weight:800;letter-spacing:-.02em}
-    .compact-amount{font-size:1.08rem;font-weight:800;letter-spacing:-.03em}
+    .compact-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}
+    .compact-title{font-size:1rem;font-weight:800;letter-spacing:-.02em;min-width:0;word-break:break-word}
+    .compact-amount{font-size:1.02rem;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
     .compact-meta{display:flex;flex-wrap:wrap;gap:6px 10px;color:var(--muted);font-size:.77rem;margin-top:4px}
     .compact-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
     .compact-badge{font-size:.71rem;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06)}
-    .compact-actions{display:flex;gap:8px;margin-top:10px}
+    .compact-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
     .compact-actions button{padding:9px 11px}
     .chart-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
     .chart-metric{padding:11px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07)}
@@ -104,10 +105,19 @@ function injectStyles(){
     .chart-metric .v{font-size:1.05rem;font-weight:800;margin-top:5px}
     .simple-breakdown{display:grid;gap:8px}
     .simple-breakdown .legend-row{padding:10px 0}
+    .category-item{grid-template-columns:minmax(0,1fr)!important;gap:8px!important;padding:10px 12px!important}
+    .category-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .category-actions button{width:auto;min-width:88px}
+    .swatch-pill{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+    .line-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .line-legend .swatch-pill{font-size:.74rem;padding:7px 10px}
     #amountInput{font-variant-numeric:tabular-nums}
     @media (max-width:390px){
-      #chartVisualCard .legend{grid-template-columns:1fr}
       .chart-summary{grid-template-columns:1fr}
+      .chart-large{height:260px!important}
+      .donut-box.small,.donut-box{height:200px!important;max-width:200px!important}
+      .compact-head{grid-template-columns:1fr}
+      .compact-amount{text-align:left}
     }
   `;
   document.head.appendChild(style);
@@ -192,6 +202,69 @@ function setScreen(name){
 
 function legendHtml(r){
   return `<div class="legend-row"><span class="dot" style="background:${r.color}"></span><div>${escapeHtml(r.label)}</div><strong class="mono">${formatMoney(r.value)}</strong></div>`;
+}
+
+function monthRange(startMonth, endMonth){
+  if(!startMonth || !endMonth) return [];
+  const months = [];
+  let cursor = startMonth;
+  let guard = 0;
+  while(cursor <= endMonth && guard < 60){ months.push(cursor); cursor = shiftMonth(cursor, 1); guard += 1; }
+  return months;
+}
+
+function monthlyCategorySeries(entries, startMonth, endMonth, limit=5){
+  const months = monthRange(startMonth, endMonth);
+  const catTotals = new Map();
+  entries.forEach(e => catTotals.set(e.category, (catTotals.get(e.category) || 0) + Number(e.amount || 0)));
+  const topCategories = [...catTotals.entries()].sort((a,b)=>b[1]-a[1]).slice(0, limit).map(([name])=>name);
+  const series = topCategories.map(name => ({
+    label: name,
+    color: getCategoryColor(name),
+    points: months.map(month => ({ label: month, value: 0 }))
+  }));
+  const indexMap = new Map(series.map(s => [s.label, s]));
+  entries.forEach(e => {
+    const month = ym(e.date);
+    const target = indexMap.get(e.category);
+    if(!target) return;
+    const point = target.points.find(p => p.label === month);
+    if(point) point.value += Number(e.amount || 0);
+  });
+  return { months, series: series.filter(s => s.points.some(p => p.value > 0)) };
+}
+
+function renderMultiLine(canvas, months, series){
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width || 300, h = rect.height || 300;
+  canvas.width = w*dpr; canvas.height = h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  const pad = {l:36,r:18,t:18,b:42};
+  const chartW = w-pad.l-pad.r, chartH = h-pad.t-pad.b;
+  const allValues = series.flatMap(s => s.points.map(p => p.value));
+  const max = Math.max(...allValues, 1);
+  ctx.strokeStyle='rgba(255,255,255,.08)';
+  for(let i=0;i<4;i++){ const y=pad.t+(chartH/3)*i; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke(); }
+  months.forEach((m,i)=>{
+    const x = pad.l + (chartW/Math.max(months.length-1,1))*i;
+    ctx.fillStyle='rgba(255,255,255,.72)'; ctx.font='11px system-ui'; ctx.textAlign='center';
+    ctx.fillText(shortMonth(m), x, h-16);
+  });
+  series.forEach(line => {
+    ctx.beginPath(); ctx.strokeStyle = line.color; ctx.lineWidth = 2.5;
+    line.points.forEach((point,i)=>{
+      const x = pad.l + (chartW/Math.max(months.length-1,1))*i;
+      const y = pad.t + chartH - (point.value/max)*chartH;
+      i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+    });
+    ctx.stroke();
+    line.points.forEach((point,i)=>{
+      const x = pad.l + (chartW/Math.max(months.length-1,1))*i;
+      const y = pad.t + chartH - (point.value/max)*chartH;
+      ctx.fillStyle = line.color; ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+    });
+  });
 }
 
 function renderDonut(canvas, data){
@@ -318,9 +391,11 @@ function renderEntries(){
 
 function renderCharts(){
   toggleChartFrequencyFilter();
+  const startMonth = $('chartStart').value || shiftMonth(currentMonth(), -2);
+  const endMonth = $('chartEnd').value || currentMonth();
   const list = filteredEntries({
-    start: $('chartStart').value || undefined,
-    end: $('chartEnd').value || undefined,
+    start: startMonth,
+    end: endMonth,
     category: $('chartCategory').value,
     payment: $('chartPayment').value,
     type: $('chartTypeFilter').value,
@@ -331,24 +406,37 @@ function renderCharts(){
   const total = sum(list);
   const agg = aggregateBy(list, group).filter(r => Number.isFinite(r.value) && r.value > 0).sort((a,b)=> (group==='Month' || group==='Year') ? a.label.localeCompare(b.label) : b.value-a.value);
   const top = agg[0];
+  const type = state.chartType;
   $('chartItemCount').textContent = `${list.length} items`;
   $('chartTotalPill').textContent = formatMoney(total);
   $('chartCenterTotal').textContent = formatMoney(total);
-  $('chartCenterLabel').textContent = `${group.toLowerCase()} view`;
-  $('chartTitle').textContent = `${group} chart`;
+  $('chartCenterLabel').textContent = type === 'line' ? 'selected range' : `${group.toLowerCase()} view`;
+  $('chartTitle').textContent = type === 'line' ? 'Category spending trend' : `${group} chart`;
   $('chartBreakdownPill').textContent = agg.length ? `Top ${Math.min(5, agg.length)}` : 'No data';
-  $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest segment</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Top share</div><div class="v mono">${top ? pct(top.value,total) : '0%'}</div></div></div><div class="simple-breakdown">${agg.slice(0,5).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('')}</div>` : '<div class="empty">No chart data for these filters.</div>';
-  const type = state.chartType;
+
   $('donutArea').classList.toggle('hidden', type !== 'donut');
   $('barArea').classList.toggle('hidden', type !== 'bar');
   $('lineArea').classList.toggle('hidden', type !== 'line');
+
   if(type === 'donut'){
     renderDonut($('chartDonut'), agg);
     $('chartLegend').innerHTML = agg.length ? agg.slice(0,8).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('') : '<div class="empty">No data.</div>';
+    $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest segment</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Top share</div><div class="v mono">${top ? pct(top.value,total) : '0%'}</div></div></div><div class="simple-breakdown">${agg.slice(0,5).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('')}</div>` : '<div class="empty">No chart data for these filters.</div>';
   }
-  if(type === 'bar') renderBar($('chartBar'), agg.map(r=>({label: group==='Month' ? shortMonth(r.label) : String(r.label).slice(0,12), value:r.value, color:r.color})));
-  if(type === 'line') renderLine($('chartLine'), agg.map(r=>({label: group==='Month' ? shortMonth(r.label) : String(r.label).slice(0,8), value:r.value})));
-  if(!agg.length){ ['chartDonut','chartBar','chartLine'].forEach(id => { const c = $(id); if(c){ const ctx = c.getContext('2d'); ctx && ctx.clearRect(0,0,c.width||0,c.height||0); } }); }
+
+  if(type === 'bar'){
+    renderBar($('chartBar'), agg.map(r=>({label: group==='Month' ? shortMonth(r.label) : String(r.label).slice(0,12), value:r.value, color:r.color})));
+    $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest bar</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Bars shown</div><div class="v mono">${agg.length}</div></div></div><div class="simple-breakdown">${agg.slice(0,5).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('')}</div>` : '<div class="empty">No chart data for these filters.</div>';
+  }
+
+  if(type === 'line'){
+    const trend = monthlyCategorySeries(list, startMonth, endMonth, 5);
+    renderMultiLine($('chartLine'), trend.months, trend.series);
+    const trendTop = [...trend.series].sort((a,b)=>sum(a.points)-sum(b.points)).reverse();
+    $('chartDetailList').innerHTML = trend.series.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Months shown</div><div class="v mono">${trend.months.length}</div></div><div class="chart-metric"><div class="k">Tracked categories</div><div class="v mono">${trend.series.length}</div></div></div><div class="line-legend">${trendTop.map(line=>`<span class="swatch-pill"><b style="background:${line.color}"></b>${escapeHtml(line.label)}</span>`).join('')}</div><div class="simple-breakdown">${trendTop.map(line=>legendHtml({label: line.label, value: sum(line.points), color: line.color})).join('')}</div>` : '<div class="empty">No trend data for these filters.</div>';
+  }
+
+  if(!(agg.length || type === 'line')){ ['chartDonut','chartBar','chartLine'].forEach(id => { const c = $(id); if(c){ const ctx = c.getContext('2d'); ctx && ctx.clearRect(0,0,c.width||0,c.height||0); } }); }
 }
 
 function clearForm(){

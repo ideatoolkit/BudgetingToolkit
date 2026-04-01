@@ -1,4 +1,4 @@
-const CACHE = 'budget-flow-v5';
+const CACHE = 'budget-flow-v6';
 const ASSETS = [
   './',
   './index.html',
