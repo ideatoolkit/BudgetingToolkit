@@ -1,14 +1,12 @@
 {
-  "name": "North Ledger",
-  "short_name": "Ledger",
+  "name": "Budget Flow",
+  "short_name": "Budget Flow",
   "start_url": "./index.html",
-  "scope": "./",
   "display": "standalone",
-  "background_color": "#0b0f14",
-  "theme_color": "#0b0f14",
-  "orientation": "portrait",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
   "icons": [
-    {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}
   ]
 }

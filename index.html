@@ -1,377 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0b0f14" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="description" content="North Ledger personal budgeting app" />
-    <title>North Ledger</title>
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <header class="topbar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Budget Flow" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Budget Flow</title>
+  <style>
+    :root {
+      --bg:#070b16;--bg2:#0b1020;--panel:#11192d;--panel-2:#0f1730;--soft:#18223f;--line:rgba(255,255,255,.08);--text:#f5f7ff;--muted:#93a0c2;--accent:#6d5efc;--accent-2:#25c7b6;--accent-3:#ff4d8d;--good:#31d98c;--warn:#f7b84b;--bad:#ff6b7b;--shadow:0 20px 60px rgba(0,0,0,.35);--r-xl:28px;--r-lg:22px;--r-md:18px;
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent} html,body{margin:0;min-height:100%;background:linear-gradient(180deg,#070b16 0%,#0b1020 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at top left, rgba(109,94,252,.22), transparent 28%),radial-gradient(circle at top right, rgba(37,199,182,.14), transparent 22%);pointer-events:none}
+    .app{max-width:460px;margin:0 auto;min-height:100vh;padding:calc(env(safe-area-inset-top,0px) + 18px) 14px calc(env(safe-area-inset-bottom,0px) + 96px);position:relative}
+    .screen{display:none}.screen.active{display:block}
+    .topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}.title{font-size:2rem;font-weight:800;letter-spacing:-.04em;margin:0 0 4px}.subtitle{color:var(--muted);font-size:.95rem;margin:0}.header-actions{display:flex;gap:8px}
+    .iconbtn,.segbtn,.navbtn,.mini-btn,.ghost-btn,.chip-btn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);border-radius:16px}.iconbtn{width:44px;height:44px;display:grid;place-items:center;font-size:1.1rem}
+    .card{background:linear-gradient(180deg,rgba(18,26,48,.95),rgba(13,20,37,.96));border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:14px;margin-bottom:12px;overflow:hidden}
+    .hero{padding:16px;background:linear-gradient(135deg,rgba(109,94,252,.92),rgba(37,199,182,.54));border-radius:30px;border:1px solid rgba(255,255,255,.12);box-shadow:var(--shadow);margin-bottom:14px}.hero-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.hero h1{margin:6px 0 2px;font-size:2.25rem;line-height:.96;letter-spacing:-.05em}.hero p{margin:0;color:rgba(255,255,255,.82);max-width:240px}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);font-size:.8rem;color:#fff}
+    .section-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.section-head h2{font-size:1.05rem;letter-spacing:-.02em;margin:0}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .stat{padding:14px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.035));border:1px solid var(--line);min-height:110px}.stat .k{color:var(--muted);font-size:.76rem}.stat .v{font-size:1.65rem;font-weight:800;line-height:1;margin-top:10px;letter-spacing:-.03em}.stat .s{color:var(--muted);font-size:.76rem;margin-top:8px}
+    .soft-card{padding:12px;border-radius:20px;background:rgba(255,255,255,.04);border:1px solid var(--line)}
+    .range-row,.tab-row,.quick-row{display:flex;gap:8px;overflow:auto;padding-bottom:2px;scrollbar-width:none}.range-row::-webkit-scrollbar,.tab-row::-webkit-scrollbar,.quick-row::-webkit-scrollbar{display:none}
+    .segbtn,.chip-btn{padding:10px 13px;white-space:nowrap;font-weight:700}.segbtn.active,.chip-btn.active{background:linear-gradient(135deg,rgba(109,94,252,.35),rgba(37,199,182,.25));color:#fff}
+    .hero-metric{margin-top:14px;padding:16px;border-radius:26px;background:rgba(8,11,22,.32);border:1px solid rgba(255,255,255,.1)}.hero-metric .big{font-size:3rem;font-weight:800;letter-spacing:-.06em;line-height:.95}.hero-metric .cap{color:rgba(255,255,255,.85);font-size:1rem}.hero-metric .mini{color:rgba(255,255,255,.72);font-size:.82rem;margin-top:8px}
+    label{display:block;color:var(--muted);font-size:.78rem;margin:0 0 6px} input,select,textarea,button{width:100%;font:inherit;border-radius:18px;padding:13px 14px;color:var(--text);background:#0a1020;border:1px solid var(--line);outline:none} textarea{min-height:84px;resize:vertical} select,input[type=date],input[type=month],input[type=text],input[type=number]{appearance:none;-webkit-appearance:none}
+    button.primary{background:linear-gradient(135deg,var(--accent),#7e76ff 55%, var(--accent-2));border:0;font-weight:800} button.secondary{background:rgba(255,255,255,.05)} button.ghost-btn{padding:10px 12px;text-align:center} .btn-row{display:flex;gap:8px}.mini-btn{padding:9px 11px;font-size:.82rem}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.full{grid-column:1/-1}.hidden{display:none!important}
+    .nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:min(452px,calc(100vw - 18px));display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px;border-radius:28px;background:rgba(8,11,21,.94);border:1px solid var(--line);backdrop-filter:blur(20px);z-index:40;box-shadow:var(--shadow)}
+    .navbtn{padding:11px 4px;background:transparent;border:none;color:var(--muted);font-size:.75rem}.navbtn.active{background:rgba(255,255,255,.09);color:#fff}.fab{position:fixed;right:max(16px,calc((100vw - 452px)/2 + 14px));bottom:calc(env(safe-area-inset-bottom,0px) + 86px);width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#8e7dff,#6d5efc,#25c7b6);display:grid;place-items:center;font-size:2rem;color:#fff;border:0;box-shadow:var(--shadow);z-index:39}
+    .chart-wrap{padding:16px;border-radius:26px;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid var(--line)}
+    .chart-large{position:relative;height:270px}.chart-large canvas,.chart-mini canvas{width:100%!important;height:100%!important;display:block}.chart-mini{position:relative;height:180px}
+    .donut-flex{display:grid;grid-template-columns:minmax(160px, 1fr) 1fr;gap:12px;align-items:center}.donut-box{position:relative;height:250px}.donut-box.small{height:200px}.center-text{position:absolute;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none}.center-text strong{font-size:2rem;letter-spacing:-.05em}.center-text span{color:var(--muted);font-size:.85rem}
+    .legend{display:grid;gap:10px}.legend-row{display:grid;grid-template-columns:14px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)}.legend-row:last-child{border-bottom:0}.dot{width:14px;height:14px;border-radius:50%}
+    .expense-list,.category-list,.detail-list{display:grid;gap:10px}.entry-card{padding:14px;border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.03));border:1px solid var(--line)}.entry-top{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}.entry-title{font-size:1.02rem;font-weight:800;letter-spacing:-.02em}.entry-amount{font-size:1.22rem;font-weight:800;letter-spacing:-.03em}.entry-sub{color:var(--muted);font-size:.8rem;margin-top:5px}.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.tag{padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:.74rem}.tag.color{padding-left:8px}.tag.color:before{content:"";width:10px;height:10px;border-radius:50%;background:var(--tag, var(--accent));display:inline-block;margin-right:7px;vertical-align:middle}
+    .entry-actions{display:flex;gap:8px;margin-top:12px}.entry-actions button{padding:10px 12px}
+    .group-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:8px 2px 2px}.group-title h3{margin:0;font-size:.95rem;color:#d9e2ff}.group-title span{font-size:.76rem;color:var(--muted)}
+    .filter-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.summary-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.summary-box{padding:10px;border-radius:18px;background:rgba(255,255,255,.04);border:1px solid var(--line)}.summary-box .k{color:var(--muted);font-size:.72rem}.summary-box .v{font-size:1.22rem;font-weight:800;margin-top:6px}
+    .color-row{display:flex;align-items:center;gap:12px}.color-row input[type=color]{width:52px;height:52px;padding:4px;border-radius:16px;background:#0a1020}.category-item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;padding:14px;border-radius:22px;background:rgba(255,255,255,.04);border:1px solid var(--line)}.category-name{font-size:1rem;font-weight:800}.category-note{font-size:.8rem;color:var(--muted);margin-top:4px}.category-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.swatch-pill{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line)}.swatch-pill b{width:14px;height:14px;border-radius:50%;display:inline-block}
+    .note{color:var(--muted);font-size:.8rem;line-height:1.45}.mono{font-variant-numeric:tabular-nums}
+    .empty{padding:24px 10px;text-align:center;color:var(--muted)} .muted{color:var(--muted)} .divider{height:1px;background:rgba(255,255,255,.05);margin:10px 0}
+    @media (max-width:390px){.grid2,.grid3,.form-grid,.filter-grid,.donut-flex,.summary-strip{grid-template-columns:1fr}.hero h1{font-size:2rem}.hero-metric .big{font-size:2.5rem}.chart-large{height:240px}.donut-box{height:210px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <section id="screen-home" class="screen active">
+    <div class="topbar">
+      <div><h1 class="title">Budget</h1><p class="subtitle">Fast tracking with clearer monthly insight</p></div>
+      <div class="header-actions">
+        <button class="iconbtn" id="openExport">⤴</button>
+        <button class="iconbtn" data-go="add">＋</button>
+      </div>
+    </div>
+    <div class="hero">
+      <div class="hero-row">
         <div>
-          <p class="label">North Ledger</p>
-          <h1 id="headerTitle">Home</h1>
+          <span class="pill" id="heroRange">1M view</span>
+          <h1 id="heroAvailable" class="mono">0.00</h1>
+          <p>left in selected period after all tracked expenses.</p>
         </div>
-        <button id="installBtn" class="button ghost small hidden" type="button">Install</button>
-      </header>
-
-      <main>
-        <section class="tab active" data-tab="home" id="tabHome">
-          <div class="hero panel gradient">
-            <div>
-              <p class="label">This month</p>
-              <div class="hero-amount" id="homeTotal">$0.00</div>
-              <div class="subtle" id="homeMonthLabel">Current month</div>
-            </div>
-            <div class="hero-pills">
-              <span class="pill" id="homeTxnCount">0 entries</span>
-              <span class="pill" id="homeTopCategory">No category yet</span>
-            </div>
-          </div>
-
-          <div class="metric-grid" id="homeMetrics"></div>
-
-          <div class="panel">
-            <div class="section-head">
-              <div>
-                <p class="label">Snapshot</p>
-                <h2>Spending trend</h2>
-              </div>
-            </div>
-            <div class="chart-card tall"><canvas id="homeTrendChart"></canvas></div>
-          </div>
-
-          <div class="panel">
-            <div class="section-head">
-              <div>
-                <p class="label">Breakdown</p>
-                <h2>Category mix</h2>
-              </div>
-            </div>
-            <div class="chart-card donut-card"><canvas id="homeDonutChart"></canvas></div>
-            <div class="legend" id="homeLegend"></div>
-          </div>
-
-          <div class="panel">
-            <div class="section-head">
-              <div>
-                <p class="label">Insights</p>
-                <h2>What changed</h2>
-              </div>
-            </div>
-            <div class="stack" id="homeInsights"></div>
-          </div>
-        </section>
-
-        <section class="tab" data-tab="add" id="tabAdd">
-          <div class="panel form-panel">
-            <div class="section-head">
-              <div>
-                <p class="label">Quick entry</p>
-                <h2 id="formTitle">Add expense</h2>
-              </div>
-              <button id="resetFormBtn" class="button ghost small" type="button">Clear</button>
-            </div>
-
-            <form id="expenseForm" class="form">
-              <input type="hidden" id="expenseId" />
-              <div class="field">
-                <label for="expenseTitle">Title</label>
-                <input id="expenseTitle" type="text" maxlength="80" placeholder="Groceries, coffee, Netflix" required />
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="expenseAmount">Amount (CAD)</label>
-                  <input id="expenseAmount" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0.00" required />
-                </div>
-                <div class="field">
-                  <label for="expenseDate">Date</label>
-                  <input id="expenseDate" type="date" required />
-                </div>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="expenseCategory">Category</label>
-                  <select id="expenseCategory"></select>
-                </div>
-                <div class="field action-field">
-                  <label>Categories</label>
-                  <button id="openCategorySheetBtn" class="button secondary" type="button">Manage</button>
-                </div>
-              </div>
-              <div class="field-row">
-                <div class="field">
-                  <label for="expensePaymentMethod">Payment method</label>
-                  <select id="expensePaymentMethod"></select>
-                </div>
-                <div class="field">
-                  <label>Cost type</label>
-                  <div class="segmented" id="costTypeSegment">
-                    <button class="segment active" data-cost-type="one-time" type="button">One-time</button>
-                    <button class="segment" data-cost-type="recurring" type="button">Recurring</button>
-                  </div>
-                  <input id="expenseCostType" type="hidden" value="one-time" />
-                </div>
-              </div>
-              <div class="field-row hidden" id="recurringRow">
-                <div class="field">
-                  <label for="expenseRecurringFrequency">Frequency</label>
-                  <select id="expenseRecurringFrequency">
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly">Yearly</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label>Period</label>
-                  <div class="segmented" id="periodSegment">
-                    <button class="segment active" data-period-type="monthly" type="button">Monthly</button>
-                    <button class="segment" data-period-type="yearly" type="button">Yearly</button>
-                  </div>
-                  <input id="expensePeriodType" type="hidden" value="monthly" />
-                </div>
-              </div>
-              <div class="field" id="nonRecurringPeriodField">
-                <label>Period</label>
-                <div class="segmented" id="periodSegmentSingle">
-                  <button class="segment active" data-period-type="monthly" type="button">Monthly</button>
-                  <button class="segment" data-period-type="yearly" type="button">Yearly</button>
-                </div>
-              </div>
-              <div class="field">
-                <label for="expenseNotes">Notes</label>
-                <textarea id="expenseNotes" rows="3" maxlength="240" placeholder="Optional notes"></textarea>
-              </div>
-              <button class="button primary full" id="saveExpenseBtn" type="submit">Save expense</button>
-            </form>
-          </div>
-
-          <div class="panel">
-            <div class="section-head">
-              <div>
-                <p class="label">Recent</p>
-                <h2>Latest submissions</h2>
-              </div>
-            </div>
-            <div class="list" id="recentList"></div>
-          </div>
-        </section>
-
-        <section class="tab" data-tab="entries" id="tabEntries">
-          <div class="panel sticky-panel">
-            <div class="section-head">
-              <div>
-                <p class="label">Review</p>
-                <h2>Entries</h2>
-              </div>
-              <button id="clearEntryFiltersBtn" class="button ghost small" type="button">Reset</button>
-            </div>
-
-            <div class="field compact-field">
-              <input id="searchInput" type="search" placeholder="Search title or notes" />
-            </div>
-            <div class="field-row tight">
-              <div class="field"><select id="filterMonth"></select></div>
-              <div class="field"><select id="filterSort">
-                <option value="date-desc">Newest</option>
-                <option value="date-asc">Oldest</option>
-                <option value="amount-desc">Highest amount</option>
-                <option value="amount-asc">Lowest amount</option>
-                <option value="created-desc">Recently added</option>
-              </select></div>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><input id="filterDateStart" type="date" /></div>
-              <div class="field"><input id="filterDateEnd" type="date" /></div>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><select id="filterCategory"></select></div>
-              <div class="field"><select id="filterPaymentMethod"></select></div>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><select id="filterCostType">
-                <option value="all">All types</option>
-                <option value="one-time">One-time</option>
-                <option value="recurring">Recurring</option>
-              </select></div>
-              <div class="field"><select id="filterFrequency">
-                <option value="all">All frequencies</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select></div>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><select id="filterPeriodType">
-                <option value="all">All periods</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select></div>
-              <div class="field"><select id="filterGroup">
-                <option value="month">Grouped by month</option>
-                <option value="none">Flat list</option>
-              </select></div>
-            </div>
-          </div>
-
-          <div class="panel ledger-panel">
-            <div class="section-head">
-              <div>
-                <p class="label">Ledger</p>
-                <h2 id="entriesHeading">0 entries</h2>
-              </div>
-            </div>
-            <div id="entriesList"></div>
-          </div>
-        </section>
-
-        <section class="tab" data-tab="charts" id="tabCharts">
-          <div class="panel sticky-panel">
-            <div class="section-head">
-              <div>
-                <p class="label">Analytics</p>
-                <h2>Charts</h2>
-              </div>
-              <button id="clearChartFiltersBtn" class="button ghost small" type="button">Reset</button>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><select id="chartMonth"></select></div>
-              <div class="field"><select id="chartCompareWindow">
-                <option value="1">1 month</option>
-                <option value="2">2 month</option>
-                <option value="3">3 month</option>
-                <option value="5">5 month</option>
-                <option value="12">12 month</option>
-                <option value="year">1 year</option>
-              </select></div>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><select id="chartCategory"></select></div>
-              <div class="field"><select id="chartPaymentMethod"></select></div>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><select id="chartCostType">
-                <option value="all">All types</option>
-                <option value="one-time">One-time</option>
-                <option value="recurring">Recurring</option>
-              </select></div>
-              <div class="field"><select id="chartFrequency">
-                <option value="all">All frequencies</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select></div>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><input id="chartDateStart" type="date" /></div>
-              <div class="field"><input id="chartDateEnd" type="date" /></div>
-            </div>
-            <div class="field-row tight">
-              <div class="field"><select id="chartPeriodType">
-                <option value="all">All periods</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select></div>
-              <div class="field stat-field"><span class="pill wide" id="chartSummaryPill">Ready</span></div>
-            </div>
-          </div>
-
-          <div class="panel">
-            <div class="section-head"><div><p class="label">Mix</p><h2>Category donut</h2></div></div>
-            <div class="chart-card donut-card"><canvas id="chartDonut"></canvas></div>
-            <div class="legend" id="chartLegend"></div>
-          </div>
-
-          <div class="panel">
-            <div class="section-head"><div><p class="label">Trend</p><h2>Monthly line</h2></div></div>
-            <div class="chart-card tall"><canvas id="chartLine"></canvas></div>
-          </div>
-
-          <div class="panel">
-            <div class="section-head"><div><p class="label">Breakdown</p><h2>Category bars</h2></div></div>
-            <div class="chart-card medium"><canvas id="chartBar"></canvas></div>
-          </div>
-
-          <div class="panel">
-            <div class="section-head"><div><p class="label">Cost type</p><h2>Recurring vs one-time</h2></div></div>
-            <div class="chart-card medium"><canvas id="chartStack"></canvas></div>
-          </div>
-
-          <div class="panel">
-            <div class="section-head"><div><p class="label">Payment methods</p><h2>Method breakdown</h2></div></div>
-            <div class="chart-card medium"><canvas id="chartPayment"></canvas></div>
-          </div>
-
-          <div class="panel">
-            <div class="section-head"><div><p class="label">Summary</p><h2>Chart insights</h2></div></div>
-            <div class="stack" id="chartInsights"></div>
-          </div>
-        </section>
-
-        <section class="tab" data-tab="settings" id="tabSettings">
-          <div class="panel">
-            <div class="section-head"><div><p class="label">Manage</p><h2>Categories</h2></div></div>
-            <button id="openCategorySheetSettingsBtn" class="button secondary" type="button">Add or edit categories</button>
-            <div class="list" id="settingsCategoryList"></div>
-          </div>
-          <div class="panel">
-            <div class="section-head"><div><p class="label">Backup</p><h2>Data</h2></div></div>
-            <div class="button-row">
-              <button id="exportBtn" class="button secondary" type="button">Export backup</button>
-              <label class="button secondary file-label">Import backup<input id="importInput" type="file" accept="application/json" hidden /></label>
-            </div>
-            <div class="storage" id="storageStatus"></div>
-            <button id="resetDataBtn" class="button danger full" type="button">Reset all data</button>
-          </div>
-        </section>
-      </main>
-
-      <nav class="bottom-nav">
-        <button class="nav-btn active" data-tab-target="home" type="button">Home</button>
-        <button class="nav-btn" data-tab-target="add" type="button">Add</button>
-        <button class="nav-btn" data-tab-target="entries" type="button">Entries</button>
-        <button class="nav-btn" data-tab-target="charts" type="button">Charts</button>
-        <button class="nav-btn" data-tab-target="settings" type="button">Settings</button>
-      </nav>
-    </div>
-
-    <div class="sheet hidden" id="categorySheet" aria-hidden="true">
-      <div class="sheet-backdrop" data-close-sheet="categorySheet"></div>
-      <div class="sheet-panel">
-        <div class="sheet-handle"></div>
-        <div class="section-head"><div><p class="label">Category</p><h2 id="categorySheetTitle">Add category</h2></div><button class="button ghost small" data-close-sheet="categorySheet" type="button">Close</button></div>
-        <form id="categoryForm" class="form compact-form">
-          <input type="hidden" id="categoryId" />
-          <div class="field"><label for="categoryName">Name</label><input id="categoryName" type="text" maxlength="40" required /></div>
-          <div class="field"><label for="categoryColor">Color</label><input id="categoryColor" type="color" value="#7c5cff" /></div>
-          <button class="button primary full" type="submit">Save category</button>
-        </form>
-        <div class="list" id="categoryList"></div>
+        <span class="pill" id="heroMonthLabel">This month</span>
+      </div>
+      <div class="hero-metric">
+        <div class="cap">Spent in period</div>
+        <div class="big mono" id="heroSpent">0.00</div>
+        <div class="mini" id="heroBreakdown">0 recurring · 0 one-time</div>
       </div>
     </div>
-
-    <div class="sheet hidden" id="entrySheet" aria-hidden="true">
-      <div class="sheet-backdrop" data-close-sheet="entrySheet"></div>
-      <div class="sheet-panel">
-        <div class="sheet-handle"></div>
-        <div class="section-head"><div><p class="label">Entry</p><h2 id="entrySheetTitle">Expense</h2></div><button class="button ghost small" data-close-sheet="entrySheet" type="button">Close</button></div>
-        <div class="detail-list" id="entrySheetBody"></div>
-        <div class="button-row spread top-gap">
-          <button id="entryEditBtn" class="button secondary" type="button">Edit</button>
-          <button id="entryDuplicateBtn" class="button secondary" type="button">Duplicate</button>
-          <button id="entryDeleteBtn" class="button danger" type="button">Delete</button>
-        </div>
+    <div class="card">
+      <div class="section-head"><h2>Time range</h2><span class="pill" id="focusMonthPretty"></span></div>
+      <div class="range-row" id="rangeRow">
+        <button class="segbtn active" data-range="1">1M</button><button class="segbtn" data-range="3">3M</button><button class="segbtn" data-range="6">6M</button><button class="segbtn" data-range="12">1Y</button><button class="segbtn" data-range="ytd">YTD</button>
+      </div>
+      <div class="form-grid" style="margin-top:12px">
+        <div><label for="focusMonth">Focus month</label><input id="focusMonth" type="month" /></div>
+        <div><label for="incomeInput">Optional monthly income</label><input id="incomeInput" type="number" step="0.01" placeholder="For available balance" /></div>
       </div>
     </div>
+    <div class="grid2">
+      <div class="stat"><div class="k">Total spend</div><div class="v mono" id="totalSpend">0.00</div><div class="s" id="totalSpendSub">selected period</div></div>
+      <div class="stat"><div class="k">Average / month</div><div class="v mono" id="avgSpend">0.00</div><div class="s" id="avgSpendSub">across selected range</div></div>
+      <div class="stat"><div class="k">Recurring</div><div class="v mono" id="recSpend">0.00</div><div class="s" id="recSub">0 items</div></div>
+      <div class="stat"><div class="k">One-time</div><div class="v mono" id="oneSpend">0.00</div><div class="s" id="oneSub">0 items</div></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>Category split</h2><span class="pill" id="topCategoryPill">No data</span></div>
+      <div class="donut-flex">
+        <div class="donut-box"><canvas id="homeDonut"></canvas><div class="center-text"><div><strong id="donutTotal" class="mono">0.00</strong><span>selected period</span></div></div></div>
+        <div class="legend" id="homeLegend"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>Monthly trend</h2><span class="pill">spend by month</span></div>
+      <div class="chart-large"><canvas id="homeTrend"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>Where time goes</h2><span class="pill">top categories</span></div>
+      <div class="detail-list" id="topCategoryList"></div>
+    </div>
+  </section>
 
-    <div class="toast hidden" id="toast"></div>
+  <section id="screen-add" class="screen">
+    <div class="topbar"><div><h1 class="title">Add</h1><p class="subtitle">Quick entry form and newest submissions</p></div></div>
+    <div class="card">
+      <div class="section-head"><h2>New expense</h2><span class="pill" id="addModePill">expense</span></div>
+      <div class="form-grid">
+        <div class="full"><label for="titleInput">Title</label><input id="titleInput" type="text" placeholder="Rent, groceries, flight, Netflix" /></div>
+        <div><label for="amountInput">Amount</label><input id="amountInput" type="text" inputmode="numeric" autocomplete="off" placeholder="$0.00" /></div>
+        <div><label for="dateInput">Date</label><input id="dateInput" type="date" /></div>
+        <div><label for="categoryInput">Category</label><select id="categoryInput"></select></div>
+        <div><label for="typeInput">Cost type</label><select id="typeInput"><option>One-Time</option><option>Recurring</option></select></div>
+        <div id="frequencyWrap"><label for="frequencyInput">Frequency</label><select id="frequencyInput"><option value="">Choose frequency</option><option>Weekly</option><option>Monthly</option><option>Yearly</option></select></div>
+        <div><label for="paymentInput">Payment method</label><select id="paymentInput"><option>Debit</option><option>Credit Card</option><option>Cash</option><option>Bank Transfer</option><option>Apple Pay</option><option>PayPal</option><option>Other</option></select></div>
+        <div class="full"><label for="notesInput">Notes (optional)</label><textarea id="notesInput" placeholder="Optional details"></textarea></div>
+      </div>
+      <div class="btn-row" style="margin-top:12px"><button class="primary" id="saveEntryBtn">Save expense</button><button class="secondary" id="resetEntryBtn" type="button">Clear</button></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>Categories</h2><span class="pill">custom + chart ready</span></div>
+      <div class="form-grid">
+        <div><label for="newCategoryName">New category name</label><input id="newCategoryName" type="text" placeholder="Gaming, Pets, Fitness" /></div>
+        <div><label>Pick a color</label><div class="color-row"><input id="newCategoryColor" type="color" value="#6d5efc" /><div class="swatch-pill"><b id="newCategoryPreview" style="background:#6d5efc"></b><span id="newCategoryHex">#6d5efc</span></div></div></div>
+      </div>
+      <div class="btn-row" style="margin-top:12px"><button class="primary" id="addCategoryBtn">Add category</button></div>
+      <div class="divider"></div>
+      <div class="category-list" id="categoryList"></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>Newest submissions</h2><span class="pill" id="recentCount">0 entries</span></div>
+      <div class="expense-list" id="recentList"></div>
+    </div>
+  </section>
 
-    <script src="app.js"></script>
-  </body>
+  <section id="screen-entries" class="screen">
+    <div class="topbar"><div><h1 class="title">Entries</h1><p class="subtitle">Organized review, search, and edit</p></div></div>
+    <div class="card">
+      <div class="section-head"><h2>Filters</h2><button class="mini-btn" id="clearEntryFilters">Reset</button></div>
+      <div class="filter-grid">
+        <div><label for="entryMonthFilter">Month</label><input id="entryMonthFilter" type="month" /></div>
+        <div><label for="entrySearch">Search title</label><input id="entrySearch" type="text" placeholder="Search title" /></div>
+        <div><label for="entryCategoryFilter">Category</label><select id="entryCategoryFilter"></select></div>
+        <div><label for="entryPaymentFilter">Payment</label><select id="entryPaymentFilter"></select></div>
+        <div><label for="entryTypeFilter">Cost type</label><select id="entryTypeFilter"><option value="all">All</option><option>One-Time</option><option>Recurring</option></select></div>
+        <div id="entryFreqWrap"><label for="entryFreqFilter">Frequency</label><select id="entryFreqFilter"><option value="all">All</option><option>Weekly</option><option>Monthly</option><option>Yearly</option></select></div>
+        <div><label for="entrySort">Sort</label><select id="entrySort"><option value="new">Newest first</option><option value="old">Oldest first</option><option value="high">Highest amount</option><option value="low">Lowest amount</option><option value="title">Title A-Z</option></select></div>
+      </div>
+      <div class="summary-strip" style="margin-top:12px"><div class="summary-box"><div class="k">Shown total</div><div class="v mono" id="entryShownTotal">0.00</div></div><div class="summary-box"><div class="k">Largest shown</div><div class="v mono" id="entryLargest">0.00</div></div><div class="summary-box"><div class="k">Shown count</div><div class="v mono" id="entryShownCount">0</div></div></div>
+    </div>
+    <div id="entriesGrouped"></div>
+  </section>
+
+  <section id="screen-charts" class="screen">
+    <div class="topbar"><div><h1 class="title">Charts</h1><p class="subtitle">Bigger views with working filters</p></div></div>
+    <div class="card">
+      <div class="section-head"><h2>Chart controls</h2><span class="pill" id="chartItemCount">0 items</span></div>
+      <div class="tab-row" id="chartTypeTabs"><button class="chip-btn active" data-chart="donut">Donut</button><button class="chip-btn" data-chart="bar">Bar</button><button class="chip-btn" data-chart="line">Trend</button></div>
+      <div class="filter-grid" style="margin-top:12px">
+        <div><label for="chartStart">Start month</label><input id="chartStart" type="month" /></div>
+        <div><label for="chartEnd">End month</label><input id="chartEnd" type="month" /></div>
+        <div><label for="chartCategory">Category</label><select id="chartCategory"></select></div>
+        <div><label for="chartPayment">Payment method</label><select id="chartPayment"></select></div>
+        <div><label for="chartTypeFilter">Cost type</label><select id="chartTypeFilter"><option value="all">All</option><option>One-Time</option><option>Recurring</option></select></div>
+        <div id="chartFreqWrap"><label for="chartFreq">Frequency</label><select id="chartFreq"><option value="all">All recurring</option><option>Weekly</option><option>Monthly</option><option>Yearly</option></select></div>
+        <div><label for="chartGroup">Group by</label><select id="chartGroup"><option>Category</option><option>Payment Method</option><option>Cost Type</option><option>Frequency</option><option>Month</option><option>Year</option></select></div>
+      </div>
+      <p class="note" style="margin-top:10px">Frequency only appears when recurring spending is being analyzed, so the chart filters stay cleaner.</p>
+    </div>
+    <div class="card" id="chartVisualCard">
+      <div class="section-head"><h2 id="chartTitle">Interactive chart</h2><span class="pill" id="chartTotalPill">0.00</span></div>
+      <div id="donutArea" class="donut-flex"><div class="donut-box small"><canvas id="chartDonut"></canvas><div class="center-text"><div><strong id="chartCenterTotal" class="mono">0.00</strong><span id="chartCenterLabel">grouped total</span></div></div></div><div class="legend" id="chartLegend"></div></div>
+      <div id="barArea" class="chart-large hidden"><canvas id="chartBar"></canvas></div>
+      <div id="lineArea" class="chart-large hidden"><canvas id="chartLine"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="section-head"><h2>Top breakdown</h2><span class="pill">filtered insight</span></div>
+      <div class="detail-list" id="chartDetailList"></div>
+    </div>
+  </section>
+
+  <section id="screen-settings" class="screen">
+    <div class="topbar"><div><h1 class="title">Settings</h1><p class="subtitle">Back up, restore, and manage data</p></div></div>
+    <div class="card"><div class="section-head"><h2>Data</h2></div><div class="btn-row"><button class="primary" id="exportJsonBtn">Export JSON</button><button class="secondary" id="exportCsvBtn">Export CSV</button></div><div class="btn-row" style="margin-top:8px"><button class="secondary" id="importBtn">Import JSON</button><button class="ghost-btn" id="seedBtn">Load demo data</button></div><input id="importFile" type="file" accept="application/json" class="hidden" /><p class="note" style="margin-top:10px">All data stays on your device in browser storage unless you export it.</p></div>
+    <div class="card"><div class="section-head"><h2>Monthly income</h2></div><label for="settingsIncome">Used for "left in period" on Home</label><input id="settingsIncome" type="number" step="0.01" placeholder="Optional monthly income" /><div class="btn-row" style="margin-top:10px"><button class="primary" id="saveIncomeBtn">Save income</button></div></div>
+    <div class="card"><div class="section-head"><h2>Danger zone</h2></div><button class="secondary" id="resetAllBtn">Delete all data</button></div>
+  </section>
+</div>
+
+<button class="fab" id="fabBtn">＋</button>
+<nav class="nav">
+  <button class="navbtn active" data-go="home">Home</button>
+  <button class="navbtn" data-go="add">Add</button>
+  <button class="navbtn" data-go="entries">Entries</button>
+  <button class="navbtn" data-go="charts">Charts</button>
+  <button class="navbtn" data-go="settings">Settings</button>
+</nav>
+
+<script src="app.js"></script>
+
+</body>
 </html>
