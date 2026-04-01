@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'budget-flow-premium-v6';
+const STORAGE_KEY = 'budget-flow-premium-v8';
 const $ = id => document.getElementById(id);
 const defaultCategories = [
   {name:'Home & Living', color:'#31d98c'},
@@ -194,10 +194,20 @@ function fillSelectors(){
   if(!$('chartPayment').value) $('chartPayment').value = 'all';
 }
 
+function rerenderVisibleScreen(name){
+  requestAnimationFrame(() => {
+    if(name === 'home'){ renderHome(); }
+    if(name === 'add'){ renderRecent(); renderCategories(); }
+    if(name === 'entries'){ renderEntries(); }
+    if(name === 'charts'){ renderCharts(); }
+  });
+}
+
 function setScreen(name){
   state.screen = name;
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === `screen-${name}`));
   document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.go === name));
+  rerenderVisibleScreen(name);
 }
 
 function legendHtml(r){
@@ -240,7 +250,7 @@ function renderMultiLine(canvas, months, series){
   const rect = canvas.getBoundingClientRect();
   const w = rect.width || 300, h = rect.height || 300;
   canvas.width = w*dpr; canvas.height = h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
-  const pad = {l:36,r:18,t:18,b:42};
+  const pad = {l:42,r:18,t:18,b:42};
   const chartW = w-pad.l-pad.r, chartH = h-pad.t-pad.b;
   const allValues = series.flatMap(s => s.points.map(p => p.value));
   const max = Math.max(...allValues, 1);
@@ -273,7 +283,8 @@ function renderDonut(canvas, data){
   const rect = canvas.getBoundingClientRect();
   const w = rect.width || 280, h = rect.height || 280;
   canvas.width = w*dpr; canvas.height = h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
-  const cx = w/2, cy = h/2, r = Math.min(w,h)/2 - 18, inner = r*0.58;
+  const size = Math.min(w,h);
+  const cx = w/2, cy = h/2, r = Math.max(44, size/2 - 34), inner = r*0.68;
   const total = data.reduce((a,b)=>a+b.value,0);
   ctx.lineWidth = r-inner;
   if(!total){ ctx.beginPath(); ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.arc(cx,cy,(r+inner)/2,0,Math.PI*2); ctx.stroke(); return; }
@@ -308,7 +319,7 @@ function renderLine(canvas, data){
   const rect = canvas.getBoundingClientRect();
   const w = rect.width || 300, h = rect.height || 300;
   canvas.width = w*dpr; canvas.height = h*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
-  const pad = {l:30,r:12,t:18,b:42}; const max = Math.max(...data.map(d=>d.value),1); const chartW = w-pad.l-pad.r, chartH = h-pad.t-pad.b;
+  const pad = {l:42,r:16,t:18,b:42}; const max = Math.max(...data.map(d=>d.value),1); const chartW = w-pad.l-pad.r, chartH = h-pad.t-pad.b;
   ctx.strokeStyle='rgba(255,255,255,.08)'; for(let i=0;i<4;i++){ const y=pad.t+(chartH/3)*i; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke(); }
   if(!data.length) return;
   ctx.beginPath(); ctx.strokeStyle='#25c7b6'; ctx.lineWidth=3;
@@ -410,7 +421,7 @@ function renderCharts(){
   $('chartItemCount').textContent = `${list.length} items`;
   $('chartTotalPill').textContent = formatMoney(total);
   $('chartCenterTotal').textContent = formatMoney(total);
-  $('chartCenterLabel').textContent = type === 'line' ? 'selected range' : `${group.toLowerCase()} view`;
+  $('chartCenterLabel').textContent = type === 'line' ? 'selected range' : `${group.toLowerCase()} split`;
   $('chartTitle').textContent = type === 'line' ? 'Category spending trend' : `${group} chart`;
   $('chartBreakdownPill').textContent = agg.length ? `Top ${Math.min(5, agg.length)}` : 'No data';
 
@@ -420,20 +431,20 @@ function renderCharts(){
 
   if(type === 'donut'){
     renderDonut($('chartDonut'), agg);
-    $('chartLegend').innerHTML = agg.length ? agg.slice(0,8).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('') : '<div class="empty">No data.</div>';
-    $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest segment</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Top share</div><div class="v mono">${top ? pct(top.value,total) : '0%'}</div></div></div><div class="simple-breakdown">${agg.slice(0,5).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('')}</div>` : '<div class="empty">No chart data for these filters.</div>';
+    $('chartLegend').innerHTML = agg.length ? agg.slice(0,6).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('') : '<div class="empty">No data.</div>';
+    $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest segment</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Top share</div><div class="v mono">${top ? pct(top.value,total) : '0%'}</div></div></div>` : '<div class="empty">No chart data for these filters.</div>';
   }
 
   if(type === 'bar'){
     renderBar($('chartBar'), agg.map(r=>({label: group==='Month' ? shortMonth(r.label) : String(r.label).slice(0,12), value:r.value, color:r.color})));
-    $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest bar</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Bars shown</div><div class="v mono">${agg.length}</div></div></div><div class="simple-breakdown">${agg.slice(0,5).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('')}</div>` : '<div class="empty">No chart data for these filters.</div>';
+    $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest bar</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Bars shown</div><div class="v mono">${agg.length}</div></div></div>` : '<div class="empty">No chart data for these filters.</div>';
   }
 
   if(type === 'line'){
     const trend = monthlyCategorySeries(list, startMonth, endMonth, 5);
     renderMultiLine($('chartLine'), trend.months, trend.series);
     const trendTop = [...trend.series].sort((a,b)=>sum(a.points)-sum(b.points)).reverse();
-    $('chartDetailList').innerHTML = trend.series.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Months shown</div><div class="v mono">${trend.months.length}</div></div><div class="chart-metric"><div class="k">Tracked categories</div><div class="v mono">${trend.series.length}</div></div></div><div class="line-legend">${trendTop.map(line=>`<span class="swatch-pill"><b style="background:${line.color}"></b>${escapeHtml(line.label)}</span>`).join('')}</div><div class="simple-breakdown">${trendTop.map(line=>legendHtml({label: line.label, value: sum(line.points), color: line.color})).join('')}</div>` : '<div class="empty">No trend data for these filters.</div>';
+    $('chartDetailList').innerHTML = trend.series.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Months shown</div><div class="v mono">${trend.months.length}</div></div><div class="chart-metric"><div class="k">Tracked categories</div><div class="v mono">${trend.series.length}</div></div></div><div class="line-legend">${trendTop.map(line=>`<span class="swatch-pill"><b style="background:${line.color}"></b>${escapeHtml(line.label)}</span>`).join('')}</div>` : '<div class="empty">No trend data for these filters.</div>';
   }
 
   if(!(agg.length || type === 'line')){ ['chartDonut','chartBar','chartLine'].forEach(id => { const c = $(id); if(c){ const ctx = c.getContext('2d'); ctx && ctx.clearRect(0,0,c.width||0,c.height||0); } }); }
@@ -594,7 +605,8 @@ bind('importFile','change', async e=>{ const file=e.target.files[0]; if(!file) r
 bind('seedBtn','click', ()=>{ if(confirm('Replace current data with demo data?')){ state.data.entries=demoEntries(); state.data.categories=[...defaultCategories]; render(); } });
 bind('saveIncomeBtn','click', ()=>{ state.data.monthlyIncome=$('settingsIncome').value; render(); alert('Income saved.'); });
 bind('resetAllBtn','click', ()=>{ if(confirm('Delete all data?')){ state.data={entries:[], categories:[...defaultCategories], monthlyIncome:''}; clearForm(); render(); } });
-window.addEventListener('resize', ()=>{ renderHome(); renderCharts(); });
+window.addEventListener('resize', ()=>{ rerenderVisibleScreen(state.screen); });
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) rerenderVisibleScreen(state.screen); });
 
 toggleFrequency();
 formatAmountField();
