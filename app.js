@@ -180,6 +180,8 @@ function fillSelectors(){
   ['entryCategoryFilter','chartCategory'].forEach(id => setOpts(id, cats));
   ['paymentInput'].forEach(id => setOpts(id, paymentMethods));
   ['entryPaymentFilter','chartPayment'].forEach(id => setOpts(id, ['all', ...paymentMethods]));
+  if(!$('chartCategory').value) $('chartCategory').value = 'all';
+  if(!$('chartPayment').value) $('chartPayment').value = 'all';
 }
 
 function setScreen(name){
@@ -292,7 +294,7 @@ function renderRecent(){
 }
 
 function renderCategories(){
-  $('categoryList').innerHTML = state.data.categories.map(c => `<div class="category-item"><div><div class="category-name">${escapeHtml(c.name)}</div><div class="category-note">Used in filters and charts automatically</div><div class="category-actions"><button class="secondary" onclick="renameCategory('${encodeURIComponent(c.name)}')">Rename</button><button class="secondary" onclick="deleteCategory('${encodeURIComponent(c.name)}')">Delete</button></div></div><div><span class="swatch-pill"><b style="background:${c.color}"></b>${c.color}</span></div></div>`).join('');
+  $('categoryList').innerHTML = state.data.categories.map(c => `<div class="category-item"><div><div class="category-name">${escapeHtml(c.name)}</div><div class="category-note">Used in filters and charts automatically</div><div class="category-actions"><button class="secondary" onclick="renameCategory('${encodeURIComponent(c.name)}')">Rename</button><button class="secondary" onclick="deleteCategory('${encodeURIComponent(c.name)}')">Delete</button></div></div><div><span class="swatch-pill"><b style="background:${c.color}"></b>Color</span></div></div>`).join('');
 }
 
 function renderEntries(){
@@ -327,14 +329,15 @@ function renderCharts(){
   let group = $('chartGroup').value;
   if(group === 'Frequency' && $('chartTypeFilter').value === 'One-Time') group = 'Cost Type';
   const total = sum(list);
-  const agg = aggregateBy(list, group).sort((a,b)=> (group==='Month' || group==='Year') ? a.label.localeCompare(b.label) : b.value-a.value);
+  const agg = aggregateBy(list, group).filter(r => Number.isFinite(r.value) && r.value > 0).sort((a,b)=> (group==='Month' || group==='Year') ? a.label.localeCompare(b.label) : b.value-a.value);
   const top = agg[0];
   $('chartItemCount').textContent = `${list.length} items`;
   $('chartTotalPill').textContent = formatMoney(total);
   $('chartCenterTotal').textContent = formatMoney(total);
   $('chartCenterLabel').textContent = `${group.toLowerCase()} view`;
   $('chartTitle').textContent = `${group} chart`;
-  $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest segment</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Top share</div><div class="v mono">${top ? pct(top.value,total) : '0%'}</div></div></div><div class="simple-breakdown">${agg.slice(0,6).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('')}</div>` : '<div class="empty">No chart data for these filters.</div>';
+  $('chartBreakdownPill').textContent = agg.length ? `Top ${Math.min(5, agg.length)}` : 'No data';
+  $('chartDetailList').innerHTML = agg.length ? `<div class="chart-summary"><div class="chart-metric"><div class="k">Filtered total</div><div class="v mono">${formatMoney(total)}</div></div><div class="chart-metric"><div class="k">Largest segment</div><div class="v">${top ? escapeHtml(group==='Month' ? monthLabel(top.label) : top.label) : 'None'}</div></div><div class="chart-metric"><div class="k">Top share</div><div class="v mono">${top ? pct(top.value,total) : '0%'}</div></div></div><div class="simple-breakdown">${agg.slice(0,5).map(r=>legendHtml({...r, label: group==='Month' ? monthLabel(r.label) : r.label})).join('')}</div>` : '<div class="empty">No chart data for these filters.</div>';
   const type = state.chartType;
   $('donutArea').classList.toggle('hidden', type !== 'donut');
   $('barArea').classList.toggle('hidden', type !== 'bar');
@@ -345,6 +348,7 @@ function renderCharts(){
   }
   if(type === 'bar') renderBar($('chartBar'), agg.map(r=>({label: group==='Month' ? shortMonth(r.label) : String(r.label).slice(0,12), value:r.value, color:r.color})));
   if(type === 'line') renderLine($('chartLine'), agg.map(r=>({label: group==='Month' ? shortMonth(r.label) : String(r.label).slice(0,8), value:r.value})));
+  if(!agg.length){ ['chartDonut','chartBar','chartLine'].forEach(id => { const c = $(id); if(c){ const ctx = c.getContext('2d'); ctx && ctx.clearRect(0,0,c.width||0,c.height||0); } }); }
 }
 
 function clearForm(){
